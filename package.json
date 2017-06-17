@@ -1,0 +1,55 @@
+{
+  "name": "wolkenkit-core",
+  "version": "0.0.0",
+  "description": "wolkenkit-core is the domain server of wolkenkit.",
+  "contributors": [
+    {
+      "name": "Golo Roden",
+      "email": "golo.roden@thenativeweb.io"
+    },
+    {
+      "name": "Matthias Wagler",
+      "email": "matthias.wagler@thenativeweb.io"
+    },
+    {
+      "name": "Christian Nolte",
+      "email": "christian.nolte@thenativeweb.io"
+    }
+  ],
+  "private": true,
+  "dependencies": {
+    "async": "2.4.1",
+    "defekt": "0.1.3",
+    "lodash": "4.17.4",
+    "processenv": "0.1.1",
+    "require-dir": "0.3.2",
+    "sparbuch": "1.0.0",
+    "stack-trace": "0.0.10",
+    "strman": "2.0.0",
+    "tailwind": "1.0.0",
+    "wolkenkit-application": "1.0.0"
+  },
+  "devDependencies": {
+    "assertthat": "0.9.0",
+    "commands-events": "1.0.0",
+    "hase": "0.5.4",
+    "knockat": "0.2.1",
+    "pg": "6.2.4",
+    "record-stdstreams": "0.1.0",
+    "roboter": "0.15.2",
+    "roboter-server": "0.15.2",
+    "runfork": "0.3.1",
+    "shelljs": "0.7.8",
+    "streamtoarray": "0.1.4",
+    "uuidv4": "0.5.0",
+    "wolkenkit-command-tools": "1.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/thenativeweb/wolkenkit-core.git"
+  },
+  "keywords": [
+    "wolkenkit"
+  ],
+  "license": "AGPL-3.0"
+}

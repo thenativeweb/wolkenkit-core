@@ -1,0 +1,22 @@
+machine:
+  timezone: Europe/Berlin
+
+  environment:
+    POSTGRES_URL_UNITS: pg://wolkenkit:wolkenkit@localhost:5433/wolkenkit
+    POSTGRES_URL_INTEGRATION: pg://wolkenkit:wolkenkit@localhost:5434/wolkenkit
+    RABBITMQ_URL_UNITS: amqp://localhost:5673
+    RABBITMQ_URL_INTEGRATION: amqp://localhost:5674
+
+  node:
+    version: 6.9.5
+
+  services:
+    - docker
+
+dependencies:
+  pre:
+    - npm install -g roboter-cli
+
+test:
+  override:
+    - bot

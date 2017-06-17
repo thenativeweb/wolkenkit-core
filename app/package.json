@@ -1,0 +1,19 @@
+{
+  "name": "wolkenkit-domain-sample",
+  "version": "0.0.0",
+  "description": "wolkenkit-domain-sample is an internal sample application for wolkenkit.",
+  "contributors": [
+    {
+      "name": "Golo Roden",
+      "email": "golo.roden@thenativeweb.io"
+    },
+    {
+      "name": "Matthias Wagler",
+      "email": "matthias.wagler@thenativeweb.io"
+    }
+  ],
+  "private": true,
+  "dependencies": {},
+  "devDependencies": {},
+  "license": "MIT"
+}
