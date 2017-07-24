@@ -14,7 +14,8 @@ const assert = require('assertthat'),
 
 const buildCommand = require('../helpers/buildCommand'),
       env = require('../helpers/env'),
-      waitForHost = require('../helpers/waitForHost');
+      waitForPostgres = require('../helpers/waitForPostgres'),
+      waitForRabbitMq = require('../helpers/waitForRabbitMq');
 
 suite('integrationTests', function () {
   this.timeout(15 * 1000);
@@ -172,7 +173,7 @@ suite('integrationTests', function () {
 
   teardown(done => {
     mq.connection.close(errMq => {
-      if (errMq && errMq.message !== 'Connection closed (Error: read ECONNRESET)') {
+      if (errMq && errMq.message !== 'Connection closed (Error: Unexpected close)') {
         return done(errMq);
       }
 
@@ -182,19 +183,17 @@ suite('integrationTests', function () {
       // of knex, which is provided by pool2. We don't have an idea WHY it works
       // this way, but apparently it does.
 
-      // We need to delay stopping the app so that RabbitMQ has time to clean up
-      // any messages left in the queue.
-      setTimeout(() => {
-        stopApp();
-        done();
-      }, 0.25 * 1000);
+      stopApp();
+      done(null);
     });
   });
 
   test('exits when the connection to the command bus / event bus / flow bus is lost.', done => {
     appLifecycle.once('exit', () => {
       shell.exec('docker start rabbitmq-integration');
-      waitForHost(env.RABBITMQ_URL_INTEGRATION, done);
+      waitForRabbitMq({
+        url: env.RABBITMQ_URL_INTEGRATION
+      }, done);
     });
 
     shell.exec('docker kill rabbitmq-integration');
@@ -203,7 +202,9 @@ suite('integrationTests', function () {
   test('exits when the connection to the event store is lost.', done => {
     appLifecycle.once('exit', () => {
       shell.exec('docker start postgres-integration');
-      waitForHost(env.POSTGRES_URL_INTEGRATION, err => {
+      waitForPostgres({
+        url: env.POSTGRES_URL_INTEGRATION
+      }, err => {
         assert.that(err).is.null();
 
         // We need to wait for a few seconds after having started
