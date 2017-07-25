@@ -13,6 +13,8 @@ const initialState = {
   isAuthorized: {
     commands: {
       start: { forPublic: true },
+      startForOwner: { forAuthenticated: false, forPublic: false },
+      startForAuthenticated: { forAuthenticated: true, forPublic: false },
       join: { forPublic: true },
       joinAndFail: { forPublic: true },
       joinOnlyForOwner: { forAuthenticated: false, forPublic: false },

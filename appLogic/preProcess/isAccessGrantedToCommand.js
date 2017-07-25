@@ -2,23 +2,15 @@
 
 const errors = require('../../errors');
 
-const isOwner = function (options) {
-  return options.command.user.id === options.aggregate.api.forReadOnly.state.isAuthorized.owner;
-};
-
 const isAuthenticated = function (options) {
   return options.command.user.id !== 'anonymous';
-};
-
-const isGrantedForAuthenticated = function (options) {
-  return options.aggregate.api.forReadOnly.state.isAuthorized.commands[options.command.name].forAuthenticated;
 };
 
 const isGrantedForPublic = function (options) {
   return options.aggregate.api.forReadOnly.state.isAuthorized.commands[options.command.name].forPublic;
 };
 
-const isAccessGranted = function (options) {
+const isAccessGrantedToCommand = function (options) {
   if (!options) {
     throw new Error('Options are missing.');
   }
@@ -30,10 +22,7 @@ const isAccessGranted = function (options) {
   }
 
   return function (callback) {
-    if (isOwner(options)) {
-      return callback(null);
-    }
-    if (isGrantedForAuthenticated(options) && isAuthenticated(options)) {
+    if (isAuthenticated(options)) {
       return callback(null);
     }
     if (isGrantedForPublic(options)) {
@@ -43,4 +32,4 @@ const isAccessGranted = function (options) {
   };
 };
 
-module.exports = isAccessGranted;
+module.exports = isAccessGrantedToCommand;

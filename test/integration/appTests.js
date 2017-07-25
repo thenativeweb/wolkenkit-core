@@ -514,6 +514,21 @@ suite('integrationTests', function () {
         commandbus.write(start);
         commandbus.write(joinOnlyForOwner);
       });
+
+      test('rejects constructor commands from public users.', done => {
+        const start = buildCommand('planning', 'peerGroup', uuid(), 'startForOwner', {
+          initiator: 'Jane Doe',
+          destination: 'Riva'
+        });
+
+        start.addToken({
+          sub: 'anonymous'
+        });
+
+        waitForEvent('startForOwnerRejected', () => done());
+
+        commandbus.write(start);
+      });
     });
 
     suite('when access is limited to authenticated users', function () {
@@ -583,6 +598,21 @@ suite('integrationTests', function () {
 
         commandbus.write(start);
         commandbus.write(joinOnlyForAuthenticated);
+      });
+
+      test('rejects constructor commands from public users.', done => {
+        const start = buildCommand('planning', 'peerGroup', uuid(), 'startForAuthenticated', {
+          initiator: 'Jane Doe',
+          destination: 'Riva'
+        });
+
+        start.addToken({
+          sub: 'anonymous'
+        });
+
+        waitForEvent('startForAuthenticatedRejected', () => done());
+
+        commandbus.write(start);
       });
     });
 

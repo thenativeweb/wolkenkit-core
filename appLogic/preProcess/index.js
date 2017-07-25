@@ -1,6 +1,7 @@
 'use strict';
 
 const initializeOwnership = require('./initializeOwnership'),
-      isAccessGranted = require('./isAccessGranted');
+      isAccessGrantedToAggregate = require('./isAccessGrantedToAggregate'),
+      isAccessGrantedToCommand = require('./isAccessGrantedToCommand');
 
-module.exports = [ initializeOwnership, isAccessGranted ];
+module.exports = [ isAccessGrantedToCommand, initializeOwnership, isAccessGrantedToAggregate ];
