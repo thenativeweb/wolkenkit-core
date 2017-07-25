@@ -9,7 +9,7 @@ const assert = require('assertthat'),
 
 const Aggregate = require('../../../../repository/Aggregate'),
       buildCommand = require('../../../helpers/buildCommand'),
-      isAccessGranted = require('../../../../appLogic/preProcess/isAccessGranted');
+      isAccessGrantedToAggregate = require('../../../../appLogic/preProcess/isAccessGrantedToAggregate');
 
 const writeModel = new WolkenkitApplication(path.join(__dirname, '..', '..', '..', '..', 'app')).writeModel;
 
@@ -21,7 +21,7 @@ const app = tailwind.createApp({
   }
 });
 
-suite('isAccessGranted', () => {
+suite('isAccessGrantedToAggregate', () => {
   let aggregate,
       command;
 
@@ -46,34 +46,34 @@ suite('isAccessGranted', () => {
   });
 
   test('is a function.', done => {
-    assert.that(isAccessGranted).is.ofType('function');
+    assert.that(isAccessGrantedToAggregate).is.ofType('function');
     done();
   });
 
   test('throws an error if options are missing.', done => {
     assert.that(() => {
-      isAccessGranted();
+      isAccessGrantedToAggregate();
     }).is.throwing('Options are missing.');
     done();
   });
 
   test('throws an error if aggregate is missing.', done => {
     assert.that(() => {
-      isAccessGranted({});
+      isAccessGrantedToAggregate({});
     }).is.throwing('Aggregate is missing.');
     done();
   });
 
   test('throws an error if command is missing.', done => {
     assert.that(() => {
-      isAccessGranted({ aggregate });
+      isAccessGrantedToAggregate({ aggregate });
     }).is.throwing('Command is missing.');
     done();
   });
 
   suite('middleware', () => {
     test('is a function.', done => {
-      const middleware = isAccessGranted({ aggregate, command });
+      const middleware = isAccessGrantedToAggregate({ aggregate, command });
 
       assert.that(middleware).is.ofType('function');
       done();
@@ -98,7 +98,7 @@ suite('isAccessGranted', () => {
       });
 
       test('accepts the owner.', done => {
-        const middleware = isAccessGranted({ aggregate, command });
+        const middleware = isAccessGrantedToAggregate({ aggregate, command });
 
         middleware(err => {
           assert.that(err).is.null();
@@ -107,7 +107,7 @@ suite('isAccessGranted', () => {
       });
 
       test('rejects authenticated users.', done => {
-        const middleware = isAccessGranted({ aggregate, command });
+        const middleware = isAccessGrantedToAggregate({ aggregate, command });
 
         command.addToken({
           sub: uuid()
@@ -120,7 +120,7 @@ suite('isAccessGranted', () => {
       });
 
       test('rejects unauthenticated users.', done => {
-        const middleware = isAccessGranted({ aggregate, command });
+        const middleware = isAccessGrantedToAggregate({ aggregate, command });
 
         command.addToken({
           sub: 'anonymous'
@@ -152,7 +152,7 @@ suite('isAccessGranted', () => {
       });
 
       test('accepts the owner.', done => {
-        const middleware = isAccessGranted({ aggregate, command });
+        const middleware = isAccessGrantedToAggregate({ aggregate, command });
 
         middleware(err => {
           assert.that(err).is.null();
@@ -161,7 +161,7 @@ suite('isAccessGranted', () => {
       });
 
       test('accepts authenticated users.', done => {
-        const middleware = isAccessGranted({ aggregate, command });
+        const middleware = isAccessGrantedToAggregate({ aggregate, command });
 
         command.addToken({
           sub: uuid()
@@ -174,7 +174,7 @@ suite('isAccessGranted', () => {
       });
 
       test('rejects unauthenticated users.', done => {
-        const middleware = isAccessGranted({ aggregate, command });
+        const middleware = isAccessGrantedToAggregate({ aggregate, command });
 
         command.addToken({
           sub: 'anonymous'
@@ -206,7 +206,7 @@ suite('isAccessGranted', () => {
       });
 
       test('accepts the owner.', done => {
-        const middleware = isAccessGranted({ aggregate, command });
+        const middleware = isAccessGrantedToAggregate({ aggregate, command });
 
         middleware(err => {
           assert.that(err).is.null();
@@ -215,7 +215,7 @@ suite('isAccessGranted', () => {
       });
 
       test('accepts authenticated users.', done => {
-        const middleware = isAccessGranted({ aggregate, command });
+        const middleware = isAccessGrantedToAggregate({ aggregate, command });
 
         command.addToken({
           sub: uuid()
@@ -228,7 +228,7 @@ suite('isAccessGranted', () => {
       });
 
       test('accepts unauthenticated users.', done => {
-        const middleware = isAccessGranted({ aggregate, command });
+        const middleware = isAccessGrantedToAggregate({ aggregate, command });
 
         command.addToken({
           sub: 'anonymous'
