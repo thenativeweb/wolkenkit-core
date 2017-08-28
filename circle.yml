@@ -8,7 +8,7 @@ machine:
     RABBITMQ_URL_INTEGRATION: amqp://localhost:5674
 
   node:
-    version: 6.9.5
+    version: 6.11.2
 
   services:
     - docker
