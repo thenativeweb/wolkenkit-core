@@ -31,12 +31,12 @@ suite('integrationTests', function () {
   const application = 'plcr',
         namespace = `${application}domain`;
 
-  const waitForEvent = function (eventName, callback) {
+  const waitForEvent = function (predicate, callback) {
     const getOnData = function (bus, done) {
       const onData = function (event) {
         event.next();
 
-        if (event.payload.name !== eventName) {
+        if (!predicate(event.payload)) {
           return;
         }
 
@@ -229,17 +229,20 @@ suite('integrationTests', function () {
       sub: uuid()
     });
 
-    waitForEvent('joinRejected', () => {
-      eventStore.getEventStream(command.aggregate.id, (errGetEventStream, eventStream) => {
-        assert.that(errGetEventStream).is.null();
+    waitForEvent(
+      event => event.name === 'joinRejected' && event.aggregate.id === command.aggregate.id,
+      () => {
+        eventStore.getEventStream(command.aggregate.id, (errGetEventStream, eventStream) => {
+          assert.that(errGetEventStream).is.null();
 
-        toArray(eventStream, (errToArray, events) => {
-          assert.that(errToArray).is.null();
-          assert.that(events.length).is.equalTo(0);
-          done();
+          toArray(eventStream, (errToArray, events) => {
+            assert.that(errToArray).is.null();
+            assert.that(events.length).is.equalTo(0);
+            done();
+          });
         });
-      });
-    });
+      }
+    );
 
     commandbus.write(command);
   });
@@ -253,15 +256,18 @@ suite('integrationTests', function () {
       sub: uuid()
     });
 
-    waitForEvent('joinRejected', event => {
-      assert.that(event.payload.context.name).is.equalTo('planning');
-      assert.that(event.payload.aggregate.name).is.equalTo('peerGroup');
-      assert.that(event.payload.aggregate.id).is.equalTo(command.aggregate.id);
-      assert.that(event.payload.name).is.equalTo('joinRejected');
-      assert.that(event.payload.data.reason).is.equalTo('Peer group does not exist.');
-      assert.that(event.payload.metadata.correlationId).is.equalTo(command.metadata.correlationId);
-      done();
-    });
+    waitForEvent(
+      event => event.name === 'joinRejected' && event.aggregate.id === command.aggregate.id,
+      event => {
+        assert.that(event.payload.context.name).is.equalTo('planning');
+        assert.that(event.payload.aggregate.name).is.equalTo('peerGroup');
+        assert.that(event.payload.aggregate.id).is.equalTo(command.aggregate.id);
+        assert.that(event.payload.name).is.equalTo('joinRejected');
+        assert.that(event.payload.data.reason).is.equalTo('Peer group does not exist.');
+        assert.that(event.payload.metadata.correlationId).is.equalTo(command.metadata.correlationId);
+        done();
+      }
+    );
 
     commandbus.write(command);
   });
@@ -275,17 +281,20 @@ suite('integrationTests', function () {
       sub: uuid()
     });
 
-    waitForEvent('joinAndFailFailed', () => {
-      eventStore.getEventStream(command.aggregate.id, (errGetEventStream, eventStream) => {
-        assert.that(errGetEventStream).is.null();
+    waitForEvent(
+      event => event.name === 'joinAndFailFailed' && event.aggregate.id === command.aggregate.id,
+      () => {
+        eventStore.getEventStream(command.aggregate.id, (errGetEventStream, eventStream) => {
+          assert.that(errGetEventStream).is.null();
 
-        toArray(eventStream, (errToArray, events) => {
-          assert.that(errToArray).is.null();
-          assert.that(events.length).is.equalTo(0);
-          done();
+          toArray(eventStream, (errToArray, events) => {
+            assert.that(errToArray).is.null();
+            assert.that(events.length).is.equalTo(0);
+            done();
+          });
         });
-      });
-    });
+      }
+    );
 
     commandbus.write(command);
   });
@@ -299,15 +308,18 @@ suite('integrationTests', function () {
       sub: uuid()
     });
 
-    waitForEvent('joinAndFailFailed', event => {
-      assert.that(event.payload.context.name).is.equalTo('planning');
-      assert.that(event.payload.aggregate.name).is.equalTo('peerGroup');
-      assert.that(event.payload.aggregate.id).is.equalTo(command.aggregate.id);
-      assert.that(event.payload.name).is.equalTo('joinAndFailFailed');
-      assert.that(event.payload.data.reason).is.equalTo('Something, somewhere went horribly wrong...');
-      assert.that(event.payload.metadata.correlationId).is.equalTo(command.metadata.correlationId);
-      done();
-    });
+    waitForEvent(
+      event => event.name === 'joinAndFailFailed' && event.aggregate.id === command.aggregate.id,
+      event => {
+        assert.that(event.payload.context.name).is.equalTo('planning');
+        assert.that(event.payload.aggregate.name).is.equalTo('peerGroup');
+        assert.that(event.payload.aggregate.id).is.equalTo(command.aggregate.id);
+        assert.that(event.payload.name).is.equalTo('joinAndFailFailed');
+        assert.that(event.payload.data.reason).is.equalTo('Something, somewhere went horribly wrong...');
+        assert.that(event.payload.metadata.correlationId).is.equalTo(command.metadata.correlationId);
+        done();
+      }
+    );
 
     commandbus.write(command);
   });
@@ -322,20 +334,23 @@ suite('integrationTests', function () {
       sub: uuid()
     });
 
-    waitForEvent('joined', () => {
-      eventStore.getEventStream(command.aggregate.id, (errGetEventStream, eventStream) => {
-        assert.that(errGetEventStream).is.null();
+    waitForEvent(
+      event => event.name === 'joined' && event.aggregate.id === command.aggregate.id,
+      () => {
+        eventStore.getEventStream(command.aggregate.id, (errGetEventStream, eventStream) => {
+          assert.that(errGetEventStream).is.null();
 
-        toArray(eventStream, (errToArray, events) => {
-          assert.that(errToArray).is.null();
-          assert.that(events.length).is.equalTo(3);
-          assert.that(events[0].name).is.equalTo('transferredOwnership');
-          assert.that(events[1].name).is.equalTo('started');
-          assert.that(events[2].name).is.equalTo('joined');
-          done();
+          toArray(eventStream, (errToArray, events) => {
+            assert.that(errToArray).is.null();
+            assert.that(events.length).is.equalTo(3);
+            assert.that(events[0].name).is.equalTo('transferredOwnership');
+            assert.that(events[1].name).is.equalTo('started');
+            assert.that(events[2].name).is.equalTo('joined');
+            done();
+          });
         });
-      });
-    });
+      }
+    );
 
     commandbus.write(command);
   });
@@ -350,29 +365,35 @@ suite('integrationTests', function () {
       sub: uuid()
     });
 
-    waitForEvent('started', eventStarted => {
-      assert.that(eventStarted.payload.context.name).is.equalTo('planning');
-      assert.that(eventStarted.payload.aggregate.name).is.equalTo('peerGroup');
-      assert.that(eventStarted.payload.aggregate.id).is.equalTo(command.aggregate.id);
-      assert.that(eventStarted.payload.name).is.equalTo('started');
-      assert.that(eventStarted.payload.data.initiator).is.equalTo(command.data.initiator);
-      assert.that(eventStarted.payload.data.destination).is.equalTo(command.data.destination);
-      assert.that(eventStarted.payload.metadata.correlationId).is.equalTo(command.metadata.correlationId);
-      assert.that(eventStarted.payload.metadata.position).is.ofType('number');
+    waitForEvent(
+      eventStarted => eventStarted.name === 'started' && eventStarted.aggregate.id === command.aggregate.id,
+      eventStarted => {
+        assert.that(eventStarted.payload.context.name).is.equalTo('planning');
+        assert.that(eventStarted.payload.aggregate.name).is.equalTo('peerGroup');
+        assert.that(eventStarted.payload.aggregate.id).is.equalTo(command.aggregate.id);
+        assert.that(eventStarted.payload.name).is.equalTo('started');
+        assert.that(eventStarted.payload.data.initiator).is.equalTo(command.data.initiator);
+        assert.that(eventStarted.payload.data.destination).is.equalTo(command.data.destination);
+        assert.that(eventStarted.payload.metadata.correlationId).is.equalTo(command.metadata.correlationId);
+        assert.that(eventStarted.payload.metadata.position).is.ofType('number');
 
-      waitForEvent('joined', eventJoined => {
-        assert.that(eventJoined.payload.context.name).is.equalTo('planning');
-        assert.that(eventJoined.payload.aggregate.name).is.equalTo('peerGroup');
-        assert.that(eventJoined.payload.aggregate.id).is.equalTo(command.aggregate.id);
-        assert.that(eventJoined.payload.name).is.equalTo('joined');
-        assert.that(eventJoined.payload.data.participant).is.equalTo(command.data.initiator);
-        assert.that(eventJoined.payload.metadata.correlationId).is.equalTo(command.metadata.correlationId);
-        assert.that(eventJoined.payload.metadata.position).is.ofType('number');
+        waitForEvent(
+          eventJoined => eventJoined.name === 'joined' && eventJoined.aggregate.id === command.aggregate.id,
+          eventJoined => {
+            assert.that(eventJoined.payload.context.name).is.equalTo('planning');
+            assert.that(eventJoined.payload.aggregate.name).is.equalTo('peerGroup');
+            assert.that(eventJoined.payload.aggregate.id).is.equalTo(command.aggregate.id);
+            assert.that(eventJoined.payload.name).is.equalTo('joined');
+            assert.that(eventJoined.payload.data.participant).is.equalTo(command.data.initiator);
+            assert.that(eventJoined.payload.metadata.correlationId).is.equalTo(command.metadata.correlationId);
+            assert.that(eventJoined.payload.metadata.position).is.ofType('number');
 
-        assert.that(eventStarted.payload.metadata.position + 1).is.equalTo(eventJoined.payload.metadata.position);
-        done();
-      });
-    });
+            assert.that(eventStarted.payload.metadata.position + 1).is.equalTo(eventJoined.payload.metadata.position);
+            done();
+          }
+        );
+      }
+    );
 
     commandbus.write(command);
   });
@@ -386,14 +407,17 @@ suite('integrationTests', function () {
       sub: uuid()
     });
 
-    waitForEvent('joinFailed', event => {
-      assert.that(event.payload.context.name).is.equalTo('nonexistent');
-      assert.that(event.payload.aggregate.name).is.equalTo('peerGroup');
-      assert.that(event.payload.aggregate.id).is.equalTo(command.aggregate.id);
-      assert.that(event.payload.name).is.equalTo('joinFailed');
-      assert.that(event.payload.data.reason).is.equalTo('Invalid context name.');
-      done();
-    });
+    waitForEvent(
+      event => event.name === 'joinFailed' && event.aggregate.id === command.aggregate.id,
+      event => {
+        assert.that(event.payload.context.name).is.equalTo('nonexistent');
+        assert.that(event.payload.aggregate.name).is.equalTo('peerGroup');
+        assert.that(event.payload.aggregate.id).is.equalTo(command.aggregate.id);
+        assert.that(event.payload.name).is.equalTo('joinFailed');
+        assert.that(event.payload.data.reason).is.equalTo('Invalid context name.');
+        done();
+      }
+    );
 
     commandbus.write(command);
   });
@@ -407,14 +431,17 @@ suite('integrationTests', function () {
       sub: uuid()
     });
 
-    waitForEvent('joinFailed', event => {
-      assert.that(event.payload.context.name).is.equalTo('planning');
-      assert.that(event.payload.aggregate.name).is.equalTo('nonexistent');
-      assert.that(event.payload.aggregate.id).is.equalTo(command.aggregate.id);
-      assert.that(event.payload.name).is.equalTo('joinFailed');
-      assert.that(event.payload.data.reason).is.equalTo('Invalid aggregate name.');
-      done();
-    });
+    waitForEvent(
+      event => event.name === 'joinFailed' && event.aggregate.id === command.aggregate.id,
+      event => {
+        assert.that(event.payload.context.name).is.equalTo('planning');
+        assert.that(event.payload.aggregate.name).is.equalTo('nonexistent');
+        assert.that(event.payload.aggregate.id).is.equalTo(command.aggregate.id);
+        assert.that(event.payload.name).is.equalTo('joinFailed');
+        assert.that(event.payload.data.reason).is.equalTo('Invalid aggregate name.');
+        done();
+      }
+    );
 
     commandbus.write(command);
   });
@@ -437,11 +464,14 @@ suite('integrationTests', function () {
       sub: uuid()
     });
 
-    waitForEvent('loadedOtherAggregate', event => {
-      assert.that(event.payload.data.initiator).is.equalTo('Jane Doe');
-      assert.that(event.payload.data.destination).is.equalTo('Riva');
-      done();
-    });
+    waitForEvent(
+      event => event.name === 'loadedOtherAggregate' && event.aggregate.id === loadOtherAggregate.aggregate.id,
+      event => {
+        assert.that(event.payload.data.initiator).is.equalTo('Jane Doe');
+        assert.that(event.payload.data.destination).is.equalTo('Riva');
+        done();
+      }
+    );
 
     commandbus.write(start);
     commandbus.write(loadOtherAggregate);
@@ -465,7 +495,10 @@ suite('integrationTests', function () {
           sub: start.user.id
         });
 
-        waitForEvent('joinedOnlyForOwner', () => done());
+        waitForEvent(
+          event => event.name === 'joinedOnlyForOwner' && event.aggregate.id === start.aggregate.id,
+          () => done()
+        );
 
         commandbus.write(start);
         commandbus.write(joinOnlyForOwner);
@@ -487,7 +520,10 @@ suite('integrationTests', function () {
           sub: uuid()
         });
 
-        waitForEvent('joinOnlyForOwnerRejected', () => done());
+        waitForEvent(
+          event => event.name === 'joinOnlyForOwnerRejected' && event.aggregate.id === start.aggregate.id,
+          () => done()
+        );
 
         commandbus.write(start);
         commandbus.write(joinOnlyForOwner);
@@ -509,7 +545,10 @@ suite('integrationTests', function () {
           sub: 'anonymous'
         });
 
-        waitForEvent('joinOnlyForOwnerRejected', () => done());
+        waitForEvent(
+          event => event.name === 'joinOnlyForOwnerRejected' && event.aggregate.id === start.aggregate.id,
+          () => done()
+        );
 
         commandbus.write(start);
         commandbus.write(joinOnlyForOwner);
@@ -525,7 +564,10 @@ suite('integrationTests', function () {
           sub: 'anonymous'
         });
 
-        waitForEvent('startForOwnerRejected', () => done());
+        waitForEvent(
+          event => event.name === 'startForOwnerRejected' && event.aggregate.id === start.aggregate.id,
+          () => done()
+        );
 
         commandbus.write(start);
       });
@@ -548,7 +590,10 @@ suite('integrationTests', function () {
           sub: start.user.id
         });
 
-        waitForEvent('joinedOnlyForAuthenticated', () => done());
+        waitForEvent(
+          event => event.name === 'joinedOnlyForAuthenticated' && event.aggregate.id === start.aggregate.id,
+          () => done()
+        );
 
         commandbus.write(start);
         commandbus.write(joinOnlyForAuthenticated);
@@ -570,7 +615,10 @@ suite('integrationTests', function () {
           sub: uuid()
         });
 
-        waitForEvent('joinedOnlyForAuthenticated', () => done());
+        waitForEvent(
+          event => event.name === 'joinedOnlyForAuthenticated' && event.aggregate.id === start.aggregate.id,
+          () => done()
+        );
 
         commandbus.write(start);
         commandbus.write(joinOnlyForAuthenticated);
@@ -594,7 +642,10 @@ suite('integrationTests', function () {
           sub: 'anonymous'
         });
 
-        waitForEvent('joinOnlyForAuthenticatedRejected', () => done());
+        waitForEvent(
+          event => event.name === 'joinOnlyForAuthenticatedRejected' && event.aggregate.id === start.aggregate.id,
+          () => done()
+        );
 
         commandbus.write(start);
         commandbus.write(joinOnlyForAuthenticated);
@@ -610,7 +661,10 @@ suite('integrationTests', function () {
           sub: 'anonymous'
         });
 
-        waitForEvent('startForAuthenticatedRejected', () => done());
+        waitForEvent(
+          event => event.name === 'startForAuthenticatedRejected' && event.aggregate.id === start.aggregate.id,
+          () => done()
+        );
 
         commandbus.write(start);
       });
@@ -633,7 +687,10 @@ suite('integrationTests', function () {
           sub: start.user.id
         });
 
-        waitForEvent('joinedForPublic', () => done());
+        waitForEvent(
+          event => event.name === 'joinedForPublic' && event.aggregate.id === start.aggregate.id,
+          () => done()
+        );
 
         commandbus.write(start);
         commandbus.write(joinForPublic);
@@ -655,7 +712,10 @@ suite('integrationTests', function () {
           sub: uuid()
         });
 
-        waitForEvent('joinedForPublic', () => done());
+        waitForEvent(
+          event => event.name === 'joinedForPublic' && event.aggregate.id === start.aggregate.id,
+          () => done()
+        );
 
         commandbus.write(start);
         commandbus.write(joinForPublic);
@@ -677,7 +737,10 @@ suite('integrationTests', function () {
           sub: 'anonymous'
         });
 
-        waitForEvent('joinedForPublic', () => done());
+        waitForEvent(
+          event => event.name === 'joinedForPublic' && event.aggregate.id === start.aggregate.id,
+          () => done()
+        );
 
         commandbus.write(start);
         commandbus.write(joinForPublic);
@@ -702,7 +765,10 @@ suite('integrationTests', function () {
           sub: 'anonymous'
         });
 
-        waitForEvent('joinedOnlyForAuthenticated', () => done());
+        waitForEvent(
+          event => event.name === 'joinedOnlyForAuthenticated' && event.aggregate.id === authorize.aggregate.id,
+          () => done()
+        );
 
         commandbus.write(authorize);
         commandbus.write(joinOnlyForAuthenticated);
@@ -725,7 +791,10 @@ suite('integrationTests', function () {
           sub: 'anonymous'
         });
 
-        waitForEvent('joinForPublicRejected', () => done());
+        waitForEvent(
+          event => event.name === 'joinForPublicRejected' && event.aggregate.id === authorize.aggregate.id,
+          () => done()
+        );
 
         commandbus.write(authorize);
         commandbus.write(joinForPublic);
@@ -748,7 +817,10 @@ suite('integrationTests', function () {
           sub: uuid()
         });
 
-        waitForEvent('joinedOnlyForOwner', () => done());
+        waitForEvent(
+          event => event.name === 'joinedOnlyForOwner' && event.aggregate.id === authorize.aggregate.id,
+          () => done()
+        );
 
         commandbus.write(authorize);
         commandbus.write(joinOnlyForOwner);
@@ -771,7 +843,10 @@ suite('integrationTests', function () {
           sub: uuid()
         });
 
-        waitForEvent('joinOnlyForAuthenticatedRejected', () => done());
+        waitForEvent(
+          event => event.name === 'joinOnlyForAuthenticatedRejected' && event.aggregate.id === authorize.aggregate.id,
+          () => done()
+        );
 
         commandbus.write(authorize);
         commandbus.write(joinOnlyForAuthenticated);
@@ -794,10 +869,13 @@ suite('integrationTests', function () {
         'can-impersonate': true
       });
 
-      waitForEvent('joined', event => {
-        assert.that(event.payload.user.id).is.equalTo(pretendedUserId);
-        done();
-      });
+      waitForEvent(
+        event => event.name === 'joined' && event.aggregate.id === command.aggregate.id,
+        event => {
+          assert.that(event.payload.user.id).is.equalTo(pretendedUserId);
+          done();
+        }
+      );
 
       commandbus.write(command);
     });
@@ -817,10 +895,13 @@ suite('integrationTests', function () {
         sub: originalUserId
       });
 
-      waitForEvent('startRejected', event => {
-        assert.that(event.payload.user.id).is.equalTo(originalUserId);
-        done();
-      });
+      waitForEvent(
+        event => event.name === 'startRejected' && event.aggregate.id === command.aggregate.id,
+        event => {
+          assert.that(event.payload.user.id).is.equalTo(originalUserId);
+          done();
+        }
+      );
 
       commandbus.write(command);
     });
