@@ -22,7 +22,7 @@
     "lodash": "4.17.4",
     "processenv": "0.1.1",
     "require-dir": "0.3.2",
-    "sparbuch": "1.0.1",
+    "sparbuch": "1.0.2",
     "stack-trace": "0.0.10",
     "strman": "2.0.0",
     "tailwind": "1.0.1",
