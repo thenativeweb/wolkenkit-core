@@ -1,41 +1,37 @@
 'use strict';
 
-const App = function (options) {
-  if (!options) {
-    throw new Error('Options are missing.');
-  }
-  if (!options.repository) {
-    throw new Error('Repository is missing.');
-  }
-  if (!options.writeModel) {
-    throw new Error('Write model is missing.');
-  }
+class App {
+  constructor ({ repository, writeModel }) {
+    if (!repository) {
+      throw new Error('Repository is missing.');
+    }
+    if (!writeModel) {
+      throw new Error('Write model is missing.');
+    }
 
-  Object.keys(options.writeModel).forEach(contextName => {
-    this[contextName] = {};
+    Object.keys(writeModel).forEach(contextName => {
+      this[contextName] = {};
 
-    Object.keys(options.writeModel[contextName]).forEach(aggregateName => {
-      this[contextName][aggregateName] = function (aggregateId) {
-        return {
-          read (callback) {
-            options.repository.loadAggregate({
-              context: { name: contextName },
-              aggregate: { name: aggregateName, id: aggregateId }
-            }, (err, aggregate) => {
-              if (err) {
-                return callback(err);
-              }
+      Object.keys(writeModel[contextName]).forEach(aggregateName => {
+        this[contextName][aggregateName] = function (aggregateId) {
+          return {
+            async read () {
+              const aggregate = await repository.loadAggregate({
+                context: { name: contextName },
+                aggregate: { name: aggregateName, id: aggregateId }
+              });
 
               if (!aggregate.api.forReadOnly.exists()) {
-                return callback(new Error('Aggregate not found.'));
+                throw new Error('Aggregate not found.');
               }
-              callback(null, aggregate.api.forReadOnly);
-            });
-          }
+
+              return aggregate.api.forReadOnly;
+            }
+          };
         };
-      };
+      });
     });
-  });
-};
+  }
+}
 
 module.exports = App;

@@ -2,30 +2,20 @@
 
 const errors = require('../errors');
 
-const validateCommand = function (options) {
-  if (!options) {
-    throw new Error('Options are missing.');
-  }
-  if (!options.command) {
+const validateCommand = async function ({ command, writeModel }) {
+  if (!command) {
     throw new Error('Command is missing.');
   }
-  if (!options.writeModel) {
+  if (!writeModel) {
     throw new Error('Write model is missing.');
   }
 
-  return function (callback) {
-    if (!callback) {
-      throw new Error('Callback is missing.');
-    }
-
-    if (!options.writeModel[options.command.context.name]) {
-      return callback(new errors.CommandFailed('Invalid context name.'));
-    }
-    if (!options.writeModel[options.command.context.name][options.command.aggregate.name]) {
-      return callback(new errors.CommandFailed('Invalid aggregate name.'));
-    }
-    callback(null);
-  };
+  if (!writeModel[command.context.name]) {
+    throw new errors.CommandFailed('Invalid context name.');
+  }
+  if (!writeModel[command.context.name][command.aggregate.name]) {
+    throw new errors.CommandFailed('Invalid aggregate name.');
+  }
 };
 
 module.exports = validateCommand;

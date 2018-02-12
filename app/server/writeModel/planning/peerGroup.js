@@ -1,6 +1,6 @@
 'use strict';
 
-const only = require('wolkenkit-command-tools').only;
+const { only } = require('wolkenkit-command-tools');
 
 const wasAlreadyJoinedBy = function (peerGroup, participant) {
   return peerGroup.state.participants.indexOf(participant) !== -1;
@@ -42,7 +42,7 @@ const initialState = {
 const commands = {
   start: [
     only.ifNotExists(),
-    (peerGroup, command, services, mark) => {
+    (peerGroup, command) => {
       peerGroup.events.publish('started', {
         initiator: command.data.initiator,
         destination: command.data.destination
@@ -51,23 +51,19 @@ const commands = {
       peerGroup.events.publish('joined', {
         participant: command.data.initiator
       });
-
-      mark.asDone();
     }
   ],
 
   join: [
     only.ifExists(),
-    (peerGroup, command, mark) => {
+    (peerGroup, command) => {
       if (wasAlreadyJoinedBy(peerGroup, command.data.participant)) {
-        return mark.asRejected('Participant had already joined.');
+        return command.reject('Participant had already joined.');
       }
 
       peerGroup.events.publish('joined', {
         participant: command.data.participant
       });
-
-      mark.asDone();
     }
   ],
 
@@ -75,87 +71,73 @@ const commands = {
     throw new Error('Something, somewhere went horribly wrong...');
   },
 
-  joinOnlyForOwner (peerGroup, command, mark) {
+  joinOnlyForOwner (peerGroup) {
     peerGroup.events.publish('joinedOnlyForOwner');
-    mark.asDone();
   },
 
-  joinOnlyForAuthenticated (peerGroup, command, mark) {
+  joinOnlyForAuthenticated (peerGroup) {
     peerGroup.events.publish('joinedOnlyForAuthenticated');
-    mark.asDone();
   },
 
-  joinForPublic (peerGroup, command, mark) {
+  joinForPublic (peerGroup) {
     peerGroup.events.publish('joinedForPublic');
-    mark.asDone();
   },
 
   joinWithFailingMiddleware: [
     () => {
       throw new Error('Failed in middleware.');
     },
-
     () => {
       throw new Error('Invalid operation.');
     }
   ],
 
   joinWithRejectingMiddleware: [
-    (peerGroup, command, mark) => {
-      mark.asRejected('Rejected by middleware.');
+    (peerGroup, command) => {
+      command.reject('Rejected by middleware.');
     },
-
     () => {
       throw new Error('Invalid operation.');
     }
   ],
 
   joinWithPassingMiddleware: [
-    (peerGroup, command, mark) => {
-      mark.asReadyForNext();
+    () => {
+      // Intentionally left blank.
     },
-
-    (peerGroup, command, mark) => {
-      mark.asDone();
+    () => {
+      // Intentionally left blank.
     }
   ],
 
-  requestServices (peerGroup, command, services, mark) {
-    /* eslint-disable prefer-rest-params */
-    if (arguments.length !== 4) {
-      /* eslint-enable prefer-rest-params */
-      return mark.asRejected('Wrong number of arguments.');
-    }
+  requestServices (peerGroup, command, services) {
     if (typeof services.get !== 'function') {
-      return mark.asRejected('Services are missing.');
+      return command.reject('Services are missing.');
     }
-    mark.asDone();
   },
 
-  /* eslint-disable no-unused-vars */
-  requestNonExistentService (peerGroup, command, services, mark) {
+  requestNonExistentService (peerGroup, command, services) {
     services.get('non-existent-service');
   },
-  /* eslint-enable no-unused-vars */
 
-  useLoggerService (peerGroup, command, services, mark) {
+  useLoggerService (peerGroup, command, services) {
     const logger = services.get('logger');
 
     logger.info('Some message from useLoggerService command.');
-    mark.asDone();
   },
 
-  loadOtherAggregate (peerGroup, command, services, mark) {
+  async loadOtherAggregate (peerGroup, command, services) {
     const app = services.get('app');
 
-    app.planning.peerGroup(command.data.otherAggregateId).read((err, otherPeerGroup) => {
-      if (err) {
-        return mark.asRejected(err.message);
-      }
+    let otherPeerGroup;
 
-      peerGroup.events.publish('loadedOtherAggregate', otherPeerGroup.state);
-      mark.asDone();
-    });
+    try {
+      otherPeerGroup = await app.planning.peerGroup(command.data.otherAggregateId).read();
+    } catch (ex) {
+      return command.reject(ex.message);
+    }
+
+    peerGroup.events.publish('loadedOtherAggregate', otherPeerGroup.state);
   }
 };
 

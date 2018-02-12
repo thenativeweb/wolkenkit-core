@@ -1,32 +1,25 @@
 'use strict';
 
-const initializeOwnership = function (options) {
-  if (!options) {
-    throw new Error('Options are missing.');
-  }
-  if (!options.aggregate) {
+const initializeOwnership = async function ({ aggregate, command }) {
+  if (!aggregate) {
     throw new Error('Aggregate is missing.');
   }
-  if (!options.command) {
+  if (!command) {
     throw new Error('Command is missing.');
   }
 
-  return function (callback) {
-    if (options.aggregate.api.forCommands.exists()) {
-      return callback(null);
-    }
+  if (aggregate.api.forCommands.exists()) {
+    return;
+  }
 
-    options.aggregate.api.forCommands.events.publish('transferredOwnership', {
-      to: options.command.user.id
-    });
+  aggregate.api.forCommands.events.publish('transferredOwnership', {
+    to: command.user.id
+  });
 
-    options.aggregate.definition.events.transferredOwnership(
-      options.aggregate.api.forEvents,
-      options.aggregate.instance.uncommittedEvents[0]
-    );
-
-    callback(null);
-  };
+  aggregate.definition.events.transferredOwnership(
+    aggregate.api.forEvents,
+    aggregate.instance.uncommittedEvents[0]
+  );
 };
 
 module.exports = initializeOwnership;

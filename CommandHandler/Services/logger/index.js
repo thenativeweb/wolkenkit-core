@@ -2,15 +2,15 @@
 
 const stackTrace = require('stack-trace');
 
-const logger = function (options) {
-  if (!options) {
-    throw new Error('Options are missing.');
+const logger = function ({ app }) {
+  if (!app) {
+    throw new Error('App is missing.');
   }
 
   return function () {
     const fileName = stackTrace.get()[2].getFileName();
 
-    return options.app.services.getLogger(fileName);
+    return app.services.getLogger(fileName);
   };
 };
 

@@ -1,7 +1,6 @@
 'use strict';
 
-const async = require('async'),
-      requireDir = require('require-dir');
+const requireDir = require('require-dir');
 
 const CommandHandler = require('../CommandHandler'),
       postProcess = require('./postProcess'),
@@ -11,33 +10,20 @@ const CommandHandler = require('../CommandHandler'),
 const workflow = requireDir();
 const steps = { preProcess, postProcess };
 
-const appLogic = function (options) {
-  if (!options) {
-    throw new Error('Options are missing.');
-  }
-  if (!options.app) {
+const appLogic = function ({ app, writeModel, eventStore }) {
+  if (!app) {
     throw new Error('App is missing.');
   }
-  if (!options.writeModel) {
+  if (!writeModel) {
     throw new Error('Write model is missing.');
   }
-  if (!options.eventStore) {
+  if (!eventStore) {
     throw new Error('Event store is missing.');
   }
-
-  const app = options.app,
-        eventStore = options.eventStore,
-        writeModel = options.writeModel;
 
   const logger = app.services.getLogger();
 
   const commandHandler = new CommandHandler({ app, writeModel, repository });
-
-  const publishEvents = workflow.publishEvents({
-    eventbus: app.eventbus,
-    flowbus: app.flowbus,
-    eventStore
-  });
 
   [
     { connection: app.commandbus.incoming, description: 'command bus' },
@@ -53,61 +39,69 @@ const appLogic = function (options) {
     });
   });
 
-  app.commandbus.incoming.on('data', command => {
+  app.commandbus.incoming.on('data', async command => {
     logger.info('Received command.', command);
 
-    async.waterfall([
-      workflow.validateCommand({ writeModel, command }),
-      workflow.impersonateCommand({ command }),
-      workflow.loadAggregate({ repository, command }),
+    let aggregate,
+        committedEvents;
 
-      workflow.process({ command, steps: steps.preProcess }),
-      workflow.handleCommand({ commandHandler, command }),
-      workflow.process({ command, steps: steps.postProcess }),
+    try {
+      await workflow.validateCommand({ command, writeModel });
+      await workflow.impersonateCommand({ command });
 
-      workflow.saveAggregate({ repository })
-    ], (errWaterfall, aggregate, committedEvents) => {
-      if (errWaterfall) {
-        logger.error('Failed to handle command.', { command, errWaterfall });
+      aggregate = await workflow.loadAggregate({ command, repository });
 
-        command.discard();
+      await workflow.process({ command, steps: steps.preProcess, aggregate });
+      await workflow.handleCommand({ command, commandHandler, aggregate });
+      await workflow.process({ command, steps: steps.postProcess, aggregate });
 
-        let errorEventName = `${command.name}Failed`;
+      committedEvents = await workflow.saveAggregate({ aggregate, repository });
+    } catch (ex) {
+      logger.error('Failed to handle command.', { command, ex });
 
-        if (errWaterfall.name === 'CommandRejected') {
-          errorEventName = `${command.name}Rejected`;
-        }
+      command.discard();
 
-        const errorEvent = new app.Event({
-          context: command.context,
-          aggregate: command.aggregate,
-          name: errorEventName,
-          data: {
-            reason: errWaterfall.cause ? errWaterfall.cause.message : errWaterfall.message
-          },
-          metadata: {
-            correlationId: command.metadata.correlationId,
-            causationId: command.id
-          }
-        });
+      const errorEventName =
+        ex.code === 'ECOMMANDREJECTED' ?
+          `${command.name}Rejected` :
+          `${command.name}Failed`;
 
-        errorEvent.addUser(command.user);
-
-        app.eventbus.outgoing.write(errorEvent);
-        app.flowbus.outgoing.write(errorEvent);
-
-        return;
-      }
-
-      logger.info('Handled command.', command);
-
-      publishEvents(aggregate.instance.id, committedEvents, errPublishEvents => {
-        command.next();
-        if (errPublishEvents) {
-          app.fail(errPublishEvents);
+      const errorEvent = new app.Event({
+        context: command.context,
+        aggregate: command.aggregate,
+        name: errorEventName,
+        data: {
+          reason: ex.cause ? ex.cause.message : ex.message
+        },
+        metadata: {
+          correlationId: command.metadata.correlationId,
+          causationId: command.id
         }
       });
-    });
+
+      errorEvent.addUser(command.user);
+
+      app.eventbus.outgoing.write(errorEvent);
+      app.flowbus.outgoing.write(errorEvent);
+
+      return;
+    }
+
+    logger.info('Handled command.', command);
+
+    try {
+      await workflow.publishEvents({
+        eventbus: app.eventbus,
+        flowbus: app.flowbus,
+        eventStore,
+        aggregateId: aggregate.instance.id,
+        committedEvents
+      });
+    } catch (ex) {
+      app.fail(ex);
+    } finally {
+      command.next();
+    }
   });
 };
 

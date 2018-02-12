@@ -1,28 +1,16 @@
 'use strict';
 
-const saveAggregate = function (options) {
-  if (!options) {
-    throw new Error('Options are missing.');
+const saveAggregate = async function ({ aggregate, repository }) {
+  if (!aggregate) {
+    throw new Error('Aggregate is missing.');
   }
-  if (!options.repository) {
+  if (!repository) {
     throw new Error('Repository is missing.');
   }
 
-  return function (aggregate, callback) {
-    if (!aggregate) {
-      throw new Error('Aggregate is missing.');
-    }
-    if (!callback) {
-      throw new Error('Callback is missing.');
-    }
+  const committedEvents = await repository.saveAggregate(aggregate);
 
-    options.repository.saveAggregate(aggregate, (err, committedEvents) => {
-      if (err) {
-        return callback(err);
-      }
-      callback(null, aggregate, committedEvents);
-    });
-  };
+  return committedEvents;
 };
 
 module.exports = saveAggregate;
