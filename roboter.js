@@ -33,6 +33,9 @@ roboter.
       ],
 
       ignore: {
+        // MIT, see https://github.com/squaremo/bitsyntax-js/commit/1692d9ec2b1bb703c44f10b181d383fa51a21f5d
+        bitsyntax: '0.0.4',
+
         // BSD-3-Clause, see https://github.com/deoxxa/duplexer2/blob/0.0.2/LICENSE.md
         duplexer2: '0.0.2',
 

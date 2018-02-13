@@ -21,7 +21,6 @@
     }
   ],
   "dependencies": {
-    "async": "2.6.0",
     "defekt": "1.0.0",
     "lodash": "4.17.5",
     "processenv": "1.0.0",
@@ -29,7 +28,7 @@
     "sparbuch": "2.0.2",
     "strman": "2.0.0",
     "tailwind": "2.0.4",
-    "wolkenkit-application": "1.0.1"
+    "wolkenkit-application": "1.0.2"
   },
   "devDependencies": {
     "assertthat": "1.0.0",
@@ -38,7 +37,6 @@
     "pg": "7.4.1",
     "pg-connection-string": "2.0.0",
     "record-stdstreams": "1.0.0",
-    "retry": "0.10.1",
     "roboter": "0.16.0",
     "roboter-server": "0.16.0",
     "runfork": "1.0.3",
