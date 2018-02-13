@@ -111,24 +111,20 @@ const commands = {
   ],
 
   requestServices (peerGroup, command, services) {
-    if (typeof services.get !== 'function') {
+    if (typeof services !== 'object') {
       return command.reject('Services are missing.');
     }
   },
 
-  requestNonExistentService (peerGroup, command, services) {
-    services.get('non-existent-service');
+  requestNonExistentService (peerGroup, command, { nonExistentService }) {
+    nonExistentService.run();
   },
 
-  useLoggerService (peerGroup, command, services) {
-    const logger = services.get('logger');
-
+  useLoggerService (peerGroup, command, { logger }) {
     logger.info('Some message from useLoggerService command.');
   },
 
-  async loadOtherAggregate (peerGroup, command, services) {
-    const app = services.get('app');
-
+  async loadOtherAggregate (peerGroup, command, { app }) {
     let otherPeerGroup;
 
     try {

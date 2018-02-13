@@ -1,6 +1,6 @@
 'use strict';
 
-const Command = require('commands-events').Command,
+const { Command } = require('commands-events'),
       uuid = require('uuidv4');
 
 const buildCommand = function (contextName, aggregateName, aggregateId, commandName, data) {

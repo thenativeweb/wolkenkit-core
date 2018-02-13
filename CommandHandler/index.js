@@ -3,7 +3,7 @@
 const flatten = require('lodash/flatten');
 
 const errors = require('../errors'),
-      Services = require('./Services');
+      getServices = require('./services/get');
 
 class CommandHandler {
   constructor ({ app, writeModel, repository }) {
@@ -17,8 +17,9 @@ class CommandHandler {
       throw new Error('Repository is missing.');
     }
 
+    this.app = app;
     this.writeModel = writeModel;
-    this.services = new Services({ app, writeModel, repository });
+    this.repository = repository;
 
     this.logger = app.services.getLogger();
   }
@@ -37,11 +38,14 @@ class CommandHandler {
       throw new errors.CommandRejected(reason);
     };
 
+    const { app, writeModel, repository } = this;
+    const services = getServices({ app, command, repository, writeModel });
+
     for (let i = 0; i < commandHandlers.length; i++) {
       const commandHandler = commandHandlers[i];
 
       try {
-        await commandHandler(aggregate.api.forCommands, command, this.services);
+        await commandHandler(aggregate.api.forCommands, command, services);
       } catch (ex) {
         if (ex.code === 'ECOMMANDREJECTED') {
           throw ex;

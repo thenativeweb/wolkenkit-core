@@ -27,7 +27,6 @@
     "processenv": "1.0.0",
     "require-dir": "1.0.0",
     "sparbuch": "2.0.2",
-    "stack-trace": "0.0.10",
     "strman": "2.0.0",
     "tailwind": "2.0.3",
     "wolkenkit-application": "1.0.1"

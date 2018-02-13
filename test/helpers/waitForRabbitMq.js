@@ -1,38 +1,15 @@
 'use strict';
 
-const amqp = require('amqplib/callback_api'),
-      retry = require('retry');
+const amqp = require('amqplib'),
+      retry = require('async-retry');
 
-const waitForRabbitMq = function (options, callback) {
-  if (!options) {
-    throw new Error('Options are missing.');
-  }
-  if (!options.url) {
-    throw new Error('Url is missing.');
-  }
+const env = require('./env');
 
-  const { url } = options;
+const waitForRabbitMq = async function () {
+  await retry(async () => {
+    const connection = await amqp.connect(env.RABBITMQ_URL, {});
 
-  const operation = retry.operation();
-
-  operation.attempt(() => {
-    amqp.connect(url, {}, (err, connection) => {
-      if (operation.retry(err)) {
-        return;
-      }
-
-      if (err) {
-        return callback(operation.mainError());
-      }
-
-      connection.close(errClose => {
-        if (errClose) {
-          return callback(errClose);
-        }
-
-        callback(null);
-      });
-    });
+    await connection.close();
   });
 };
 
