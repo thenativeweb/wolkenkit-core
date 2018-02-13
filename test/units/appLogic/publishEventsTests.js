@@ -7,96 +7,68 @@ const buildEvent = require('../../helpers/buildEvent'),
       publishEvents = require('../../../appLogic/publishEvents');
 
 suite('publishEvents', () => {
-  test('is a function.', done => {
+  test('is a function.', async () => {
     assert.that(publishEvents).is.ofType('function');
-    done();
   });
 
-  test('throws an error if options are missing.', done => {
-    assert.that(() => {
-      publishEvents();
-    }).is.throwing('Options are missing.');
-    done();
+  test('throws an error if event bus is missing.', async () => {
+    await assert.that(async () => {
+      await publishEvents({});
+    }).is.throwingAsync('Event bus is missing.');
   });
 
-  test('throws an error if event bus is missing.', done => {
-    assert.that(() => {
-      publishEvents({});
-    }).is.throwing('Event bus is missing.');
-    done();
-  });
-
-  test('throws an error if flow bus is missing.', done => {
-    assert.that(() => {
-      publishEvents({
+  test('throws an error if flow bus is missing.', async () => {
+    await assert.that(async () => {
+      await publishEvents({
         eventbus: {}
       });
-    }).is.throwing('Flow bus is missing.');
-    done();
+    }).is.throwingAsync('Flow bus is missing.');
   });
 
-  test('throws an error if event store is missing.', done => {
-    assert.that(() => {
-      publishEvents({
+  test('throws an error if event store is missing.', async () => {
+    await assert.that(async () => {
+      await publishEvents({
         eventbus: {},
         flowbus: {}
       });
-    }).is.throwing('Event store is missing.');
-    done();
+    }).is.throwingAsync('Event store is missing.');
   });
 
-  suite('middleware', () => {
-    test('is a function.', done => {
-      const middleware = publishEvents({
+  test('throws an error if aggregate id is missing.', async () => {
+    await assert.that(async () => {
+      await publishEvents({
         eventbus: {},
         flowbus: {},
         eventStore: {}
       });
+    }).is.throwingAsync('Aggregate id is missing.');
+  });
 
-      assert.that(middleware).is.ofType('function');
-      done();
-    });
-
-    test('throws an error if aggregate id is missing.', done => {
-      const middleware = publishEvents({
+  test('throws an error if committed events are missing.', async () => {
+    await assert.that(async () => {
+      await publishEvents({
         eventbus: {},
         flowbus: {},
-        eventStore: {}
+        eventStore: {},
+        aggregateId: uuid()
       });
+    }).is.throwingAsync('Committed events are missing.');
+  });
 
-      assert.that(() => {
-        middleware();
-      }).is.throwing('Aggregate id is missing.');
-      done();
+  test('throws an error if publishing to the event bus fails.', async () => {
+    const eventStarted = buildEvent('planning', 'peerGroup', uuid(), 'started', {
+      initiator: 'Jane Doe',
+      destination: 'Riva',
+      participants: []
     });
 
-    test('throws an error if callback is missing.', done => {
-      const aggregateId = uuid();
-      const middleware = publishEvents({
-        eventbus: {},
-        flowbus: {},
-        eventStore: {}
-      });
+    eventStarted.metadata.position = 1;
 
-      assert.that(() => {
-        middleware(aggregateId);
-      }).is.throwing('Callback is missing.');
-      done();
-    });
+    const aggregateId = uuid(),
+          committedEvents = [ eventStarted ];
 
-    test('returns an error if publishing to the event bus fails.', done => {
-      const eventStarted = buildEvent('planning', 'peerGroup', uuid(), 'started', {
-        initiator: 'Jane Doe',
-        destination: 'Riva',
-        participants: []
-      });
-
-      eventStarted.metadata.position = 1;
-
-      const aggregateId = uuid(),
-            committedEvents = [ eventStarted ];
-
-      const middleware = publishEvents({
+    await assert.that(async () => {
+      await publishEvents({
         eventbus: {
           outgoing: {
             write () {
@@ -105,28 +77,27 @@ suite('publishEvents', () => {
           }
         },
         flowbus: {},
-        eventStore: {}
+        eventStore: {},
+        aggregateId,
+        committedEvents
       });
+    }).is.throwingAsync('Error during write.');
+  });
 
-      middleware(aggregateId, committedEvents, err => {
-        assert.that(err).is.not.null();
-        done();
-      });
+  test('throws an error if publishing to the flow bus fails.', async () => {
+    const eventStarted = buildEvent('planning', 'peerGroup', uuid(), 'started', {
+      initiator: 'Jane Doe',
+      destination: 'Riva',
+      participants: []
     });
 
-    test('returns an error if publishing to the flow bus fails.', done => {
-      const eventStarted = buildEvent('planning', 'peerGroup', uuid(), 'started', {
-        initiator: 'Jane Doe',
-        destination: 'Riva',
-        participants: []
-      });
+    eventStarted.metadata.position = 1;
 
-      eventStarted.metadata.position = 1;
+    const aggregateId = uuid(),
+          committedEvents = [ eventStarted ];
 
-      const aggregateId = uuid(),
-            committedEvents = [ eventStarted ];
-
-      const middleware = publishEvents({
+    await assert.that(async () => {
+      await publishEvents({
         eventbus: {
           outgoing: {
             write () {}
@@ -139,28 +110,27 @@ suite('publishEvents', () => {
             }
           }
         },
-        eventStore: {}
+        eventStore: {},
+        aggregateId,
+        committedEvents
       });
+    }).is.throwingAsync('Error during write.');
+  });
 
-      middleware(aggregateId, committedEvents, err => {
-        assert.that(err).is.not.null();
-        done();
-      });
+  test('throws an error if marking published events fails.', async () => {
+    const eventStarted = buildEvent('planning', 'peerGroup', uuid(), 'started', {
+      initiator: 'Jane Doe',
+      destination: 'Riva',
+      participants: []
     });
 
-    test('returns an error if marking published events fails.', done => {
-      const eventStarted = buildEvent('planning', 'peerGroup', uuid(), 'started', {
-        initiator: 'Jane Doe',
-        destination: 'Riva',
-        participants: []
-      });
+    eventStarted.metadata.position = 1;
 
-      eventStarted.metadata.position = 1;
+    const aggregateId = uuid();
+    const committedEvents = [ eventStarted ];
 
-      const aggregateId = uuid();
-      const committedEvents = [ eventStarted ];
-
-      const middleware = publishEvents({
+    await assert.that(async () => {
+      await publishEvents({
         eventbus: {
           outgoing: {
             write () {}
@@ -172,31 +142,30 @@ suite('publishEvents', () => {
           }
         },
         eventStore: {
-          markEventsAsPublished (options, callback) {
-            callback(new Error());
+          async markEventsAsPublished () {
+            throw new Error('Marking events failed.');
           }
-        }
+        },
+        aggregateId,
+        committedEvents
       });
+    }).is.throwingAsync('Marking events failed.');
+  });
 
-      middleware(aggregateId, committedEvents, err => {
-        assert.that(err).is.not.null();
-        done();
-      });
+  test('does not throw an error if publishing and marking events succeeds.', async () => {
+    const eventStarted = buildEvent('planning', 'peerGroup', uuid(), 'started', {
+      initiator: 'Jane Doe',
+      destination: 'Riva',
+      participants: []
     });
 
-    test('does not return an error if publishing and marking events succeeds.', done => {
-      const eventStarted = buildEvent('planning', 'peerGroup', uuid(), 'started', {
-        initiator: 'Jane Doe',
-        destination: 'Riva',
-        participants: []
-      });
+    eventStarted.metadata.position = 1;
 
-      eventStarted.metadata.position = 1;
+    const aggregateId = uuid(),
+          committedEvents = [ eventStarted ];
 
-      const aggregateId = uuid(),
-            committedEvents = [ eventStarted ];
-
-      const middleware = publishEvents({
+    await assert.that(async () => {
+      await publishEvents({
         eventbus: {
           outgoing: {
             write () {}
@@ -208,16 +177,13 @@ suite('publishEvents', () => {
           }
         },
         eventStore: {
-          markEventsAsPublished (options, callback) {
-            callback(null);
+          async markEventsAsPublished () {
+            // Intentionally left blank.
           }
-        }
+        },
+        aggregateId,
+        committedEvents
       });
-
-      middleware(aggregateId, committedEvents, err => {
-        assert.that(err).is.null();
-        done();
-      });
-    });
+    }).is.not.throwingAsync();
   });
 });

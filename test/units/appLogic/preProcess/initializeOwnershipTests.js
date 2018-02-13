@@ -11,7 +11,7 @@ const Aggregate = require('../../../../repository/Aggregate'),
       buildCommand = require('../../../helpers/buildCommand'),
       initializeOwnership = require('../../../../appLogic/preProcess/initializeOwnership');
 
-const writeModel = new WolkenkitApplication(path.join(__dirname, '..', '..', '..', '..', 'app')).writeModel;
+const { writeModel } = new WolkenkitApplication(path.join(__dirname, '..', '..', '..', '..', 'app'));
 
 const app = tailwind.createApp({
   keys: path.join(__dirname, '..', '..', '..', 'keys'),
@@ -45,65 +45,38 @@ suite('initializeOwnership', () => {
     });
   });
 
-  test('is a function.', done => {
+  test('is a function.', async () => {
     assert.that(initializeOwnership).is.ofType('function');
-    done();
   });
 
-  test('throws an error if options are missing.', done => {
-    assert.that(() => {
-      initializeOwnership();
-    }).is.throwing('Options are missing.');
-    done();
+  test('throws an error if aggregate is missing.', async () => {
+    await assert.that(async () => {
+      await initializeOwnership({});
+    }).is.throwingAsync('Aggregate is missing.');
   });
 
-  test('throws an error if aggregate is missing.', done => {
-    assert.that(() => {
-      initializeOwnership({});
-    }).is.throwing('Aggregate is missing.');
-    done();
+  test('throws an error if command is missing.', async () => {
+    await assert.that(async () => {
+      await initializeOwnership({ aggregate });
+    }).is.throwingAsync('Command is missing.');
   });
 
-  test('throws an error if command is missing.', done => {
-    assert.that(() => {
-      initializeOwnership({ aggregate });
-    }).is.throwing('Command is missing.');
-    done();
+  test('does not transfer the ownership if the aggregate already exists.', async () => {
+    aggregate.applySnapshot({
+      state: { initiator: 'Jane Doe', destination: 'Riva' },
+      revision: 1
+    });
+
+    await initializeOwnership({ aggregate, command });
+
+    assert.that(aggregate.instance.uncommittedEvents).is.equalTo([]);
   });
 
-  suite('middleware', () => {
-    let middleware;
+  test('transfers the ownership if the aggregate does not yet exist.', async () => {
+    await initializeOwnership({ aggregate, command });
 
-    setup(() => {
-      middleware = initializeOwnership({ aggregate, command });
-    });
-
-    test('is a function.', done => {
-      assert.that(middleware).is.ofType('function');
-      done();
-    });
-
-    test('does not transfer the ownership if the aggregate already exists.', done => {
-      aggregate.applySnapshot({
-        state: { initiator: 'Jane Doe', destination: 'Riva' },
-        revision: 1
-      });
-
-      middleware(err => {
-        assert.that(err).is.null();
-        assert.that(aggregate.instance.uncommittedEvents).is.equalTo([]);
-        done();
-      });
-    });
-
-    test('transfers the ownership if the aggregate does not yet exist.', done => {
-      middleware(err => {
-        assert.that(err).is.null();
-        assert.that(aggregate.instance.uncommittedEvents.length).is.equalTo(1);
-        assert.that(aggregate.instance.uncommittedEvents[0].name).is.equalTo('transferredOwnership');
-        assert.that(aggregate.instance.uncommittedEvents[0].data.to).is.equalTo(command.user.id);
-        done();
-      });
-    });
+    assert.that(aggregate.instance.uncommittedEvents.length).is.equalTo(1);
+    assert.that(aggregate.instance.uncommittedEvents[0].name).is.equalTo('transferredOwnership');
+    assert.that(aggregate.instance.uncommittedEvents[0].data.to).is.equalTo(command.user.id);
   });
 });

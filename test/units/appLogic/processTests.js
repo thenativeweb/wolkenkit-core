@@ -12,7 +12,7 @@ const Aggregate = require('../../../repository/Aggregate'),
       preProcessSteps = require('../../../appLogic/preProcess'),
       process = require('../../../appLogic/process');
 
-const writeModel = new WolkenkitApplication(path.join(__dirname, '..', '..', '..', 'app')).writeModel;
+const { writeModel } = new WolkenkitApplication(path.join(__dirname, '..', '..', '..', 'app'));
 
 const app = tailwind.createApp({
   keys: path.join(__dirname, '..', '..', 'keys'),
@@ -46,68 +46,49 @@ suite('process', () => {
     });
   });
 
-  test('is a function.', done => {
+  test('is a function.', async () => {
     assert.that(process).is.ofType('function');
-    done();
   });
 
-  test('throws an error if options are missing.', done => {
-    assert.that(() => {
-      process();
-    }).is.throwing('Options are missing.');
-    done();
+  test('throws an error if command is missing.', async () => {
+    await assert.that(async () => {
+      await process({});
+    }).is.throwingAsync('Command is missing.');
   });
 
-  test('throws an error if command is missing.', done => {
-    assert.that(() => {
-      process({});
-    }).is.throwing('Command is missing.');
-    done();
+  test('throws an error if steps are missing.', async () => {
+    await assert.that(async () => {
+      await process({ command });
+    }).is.throwingAsync('Steps are missing.');
   });
 
-  test('throws an error if steps is missing.', done => {
-    assert.that(() => {
-      process({ command });
-    }).is.throwing('Steps are missing.');
-    done();
+  test('throws an error if aggregate is missing.', async () => {
+    await assert.that(async () => {
+      await process({ command, steps: preProcessSteps });
+    }).is.throwingAsync('Aggregate is missing.');
   });
 
-  suite('middleware', () => {
-    let middleware;
-
-    setup(() => {
-      middleware = process({ command, steps: preProcessSteps });
-    });
-
-    test('is a function.', done => {
-      assert.that(middleware).is.ofType('function');
-      done();
-    });
-
-    test('returns an error if a middleware step fails.', done => {
-      aggregate.applySnapshot({
-        state: {
-          isAuthorized: {
-            owner: uuid(),
-            commands: {
-              join: { forAuthenticated: false, forPublic: false }
-            }
+  test('throws an error if a middleware step fails.', async () => {
+    aggregate.applySnapshot({
+      state: {
+        isAuthorized: {
+          owner: uuid(),
+          commands: {
+            join: { forAuthenticated: false, forPublic: false }
           }
-        },
-        revision: 1
-      });
-
-      middleware(aggregate, err => {
-        assert.that(err).is.not.null();
-        done();
-      });
+        }
+      },
+      revision: 1
     });
 
-    test('does not return an error if all middleware steps succeed.', done => {
-      middleware(aggregate, err => {
-        assert.that(err).is.null();
-        done();
-      });
-    });
+    await assert.that(async () => {
+      await process({ command, steps: preProcessSteps, aggregate });
+    }).is.throwingAsync('Access denied.');
+  });
+
+  test('does not throw an error if all middleware steps succeed.', async () => {
+    await assert.that(async () => {
+      await process({ command, steps: preProcessSteps, aggregate });
+    }).is.not.throwingAsync();
   });
 });

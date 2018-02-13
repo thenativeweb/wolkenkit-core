@@ -1,116 +1,72 @@
 'use strict';
 
-const _ = require('lodash'),
-      assert = require('assertthat'),
+const assert = require('assertthat'),
+      cloneDeep = require('lodash/cloneDeep'),
       uuid = require('uuidv4');
 
 const buildEvent = require('../../helpers/buildEvent'),
       saveAggregate = require('../../../appLogic/saveAggregate');
 
 suite('saveAggregate', () => {
-  test('is a function.', done => {
+  test('is a function.', async () => {
     assert.that(saveAggregate).is.ofType('function');
-    done();
   });
 
-  test('throws an error if options are missing.', done => {
-    assert.that(() => {
-      saveAggregate();
-    }).is.throwing('Options are missing.');
-    done();
+  test('throws an error if aggregate is missing.', async () => {
+    await assert.that(async () => {
+      await saveAggregate({});
+    }).is.throwingAsync('Aggregate is missing.');
   });
 
-  test('throws an error if repository is missing.', done => {
-    assert.that(() => {
-      saveAggregate({});
-    }).is.throwing('Repository is missing.');
-    done();
+  test('throws an error if repository is missing.', async () => {
+    await assert.that(async () => {
+      await saveAggregate({ aggregate: {}});
+    }).is.throwingAsync('Repository is missing.');
   });
 
-  suite('middleware', () => {
-    test('is a function.', done => {
-      const middleware = saveAggregate({
-        repository: {}
-      });
-
-      assert.that(middleware).is.ofType('function');
-      done();
-    });
-
-    test('throws an error if aggregate is missing.', done => {
-      const middleware = saveAggregate({
-        repository: {}
-      });
-
-      assert.that(() => {
-        middleware();
-      }).is.throwing('Aggregate is missing.');
-      done();
-    });
-
-    test('throws an error if callback is missing.', done => {
-      const middleware = saveAggregate({
-        repository: {}
-      });
-
-      assert.that(() => {
-        middleware({});
-      }).is.throwing('Callback is missing.');
-      done();
-    });
-
-    test('returns an error if the repository fails.', done => {
-      const aggregate = {};
-
-      const middleware = saveAggregate({
+  test('throws an error if the repository fails.', async () => {
+    await assert.that(async () => {
+      await saveAggregate({
+        aggregate: {},
         repository: {
-          saveAggregate (receivedAggregate, callback) {
-            callback(new Error());
+          async saveAggregate () {
+            throw new Error('Save failed.');
           }
         }
       });
+    }).is.throwingAsync('Save failed.');
+  });
 
-      middleware(aggregate, err => {
-        assert.that(err).is.not.null();
-        done();
-      });
+  test('returns the committed events if the repository succeeds.', async () => {
+    const eventStarted = buildEvent('planning', 'peerGroup', uuid(), 'started', {
+      initiator: 'Jane Doe',
+      destination: 'Riva',
+      participants: []
     });
 
-    test('returns the aggregate and the committed events if the repository succeeds.', done => {
-      const eventStarted = buildEvent('planning', 'peerGroup', uuid(), 'started', {
-        initiator: 'Jane Doe',
-        destination: 'Riva',
-        participants: []
-      });
+    const aggregate = {
+      instance: {
+        id: uuid(),
+        uncommittedEvents: [ eventStarted ]
+      }
+    };
 
-      const aggregate = {
-        instance: {
-          id: uuid(),
-          uncommittedEvents: [ eventStarted ]
+    const committedEventsAfterSave = await saveAggregate({
+      aggregate,
+      repository: {
+        async saveAggregate (receivedAggregate) {
+          assert.that(receivedAggregate).is.sameAs(aggregate);
+
+          const committedEvents = cloneDeep(receivedAggregate.instance.uncommittedEvents);
+
+          return committedEvents;
         }
-      };
-
-      const middleware = saveAggregate({
-        repository: {
-          saveAggregate (receivedAggregate, callback) {
-            assert.that(receivedAggregate).is.sameAs(aggregate);
-
-            const committedEvents = _.cloneDeep(receivedAggregate.instance.uncommittedEvents);
-
-            callback(null, committedEvents);
-          }
-        }
-      });
-
-      middleware(aggregate, (err, savedAggregate, committedEvents) => {
-        assert.that(err).is.null();
-        assert.that(savedAggregate).is.sameAs(aggregate);
-        assert.that(committedEvents.length).is.equalTo(1);
-        assert.that(committedEvents).is.not.sameAs(aggregate.instance.uncommittedEvents);
-        assert.that(committedEvents[0]).is.not.sameAs(aggregate.instance.uncommittedEvents[0]);
-        assert.that(committedEvents[0].name).is.equalTo(aggregate.instance.uncommittedEvents[0].name);
-        done();
-      });
+      }
     });
+
+    assert.that(committedEventsAfterSave.length).is.equalTo(1);
+    assert.that(committedEventsAfterSave).is.not.sameAs(aggregate.instance.uncommittedEvents);
+    assert.that(committedEventsAfterSave[0]).is.not.sameAs(aggregate.instance.uncommittedEvents[0]);
+    assert.that(committedEventsAfterSave[0].name).is.equalTo(aggregate.instance.uncommittedEvents[0].name);
   });
 });

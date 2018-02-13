@@ -5,102 +5,53 @@ const assert = require('assertthat');
 const handleCommand = require('../../../appLogic/handleCommand');
 
 suite('handleCommand', () => {
-  test('is a function.', done => {
+  test('is a function.', async () => {
     assert.that(handleCommand).is.ofType('function');
-    done();
   });
 
-  test('throws an error if options are missing.', done => {
-    assert.that(() => {
-      handleCommand();
-    }).is.throwing('Options are missing.');
-    done();
+  test('throws an error if command is missing.', async () => {
+    await assert.that(async () => {
+      await handleCommand({});
+    }).is.throwingAsync('Command is missing.');
   });
 
-  test('throws an error if command is missing.', done => {
-    assert.that(() => {
-      handleCommand({});
-    }).is.throwing('Command is missing.');
-    done();
+  test('throws an error if command handler is missing.', async () => {
+    await assert.that(async () => {
+      await handleCommand({ command: {}});
+    }).is.throwingAsync('Command handler is missing.');
   });
 
-  test('throws an error if command handler is missing.', done => {
-    assert.that(() => {
-      handleCommand({
-        command: {}
-      });
-    }).is.throwing('Command handler is missing.');
-    done();
+  test('throws an error if aggregate is missing.', async () => {
+    await assert.that(async () => {
+      await handleCommand({ command: {}, commandHandler: {}});
+    }).is.throwingAsync('Aggregate is missing.');
   });
 
-  suite('middleware', () => {
-    test('is a function.', done => {
-      const middleware = handleCommand({
-        command: {},
-        commandHandler: {}
-      });
-
-      assert.that(middleware).is.ofType('function');
-      done();
-    });
-
-    test('throws an error if aggregate is missing.', done => {
-      const middleware = handleCommand({
-        command: {},
-        commandHandler: {}
-      });
-
-      assert.that(() => {
-        middleware();
-      }).is.throwing('Aggregate is missing.');
-      done();
-    });
-
-    test('throws an error if callback is missing.', done => {
-      const middleware = handleCommand({
-        command: {},
-        commandHandler: {}
-      });
-
-      assert.that(() => {
-        middleware({});
-      }).is.throwing('Callback is missing.');
-      done();
-    });
-
-    test('returns an error if the command handler fails.', done => {
-      const middleware = handleCommand({
+  test('throws an error if the command handler fails.', async () => {
+    await assert.that(async () => {
+      await handleCommand({
         command: {},
         commandHandler: {
-          handle (options, callback) {
-            callback(new Error());
+          async handle () {
+            throw new Error('Command handler failed.');
           }
-        }
+        },
+        aggregate: {}
       });
+    }).is.throwingAsync('Command handler failed.');
+  });
 
-      middleware({}, err => {
-        assert.that(err).is.not.null();
-        done();
-      });
-    });
-
-    test('returns the aggregate if the command handler succeeds.', done => {
-      const middleware = handleCommand({
+  test('does not throw an error if the command handler succeeds.', async () => {
+    await assert.that(async () => {
+      await handleCommand({
         command: {},
         commandHandler: {
-          handle (options, callback) {
-            callback(null);
+          async handle () {
+            // Intentionally left blank.
           }
-        }
+        },
+        aggregate: {}
       });
-
-      const aggregate = {};
-
-      middleware(aggregate, (err, receivedAggregate) => {
-        assert.that(err).is.null();
-        assert.that(receivedAggregate).is.sameAs(aggregate);
-        done();
-      });
-    });
+    }).is.not.throwingAsync();
   });
 });

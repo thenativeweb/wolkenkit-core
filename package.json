@@ -28,7 +28,7 @@
     "require-dir": "1.0.0",
     "sparbuch": "2.0.2",
     "strman": "2.0.0",
-    "tailwind": "2.0.3",
+    "tailwind": "2.0.4",
     "wolkenkit-application": "1.0.1"
   },
   "devDependencies": {

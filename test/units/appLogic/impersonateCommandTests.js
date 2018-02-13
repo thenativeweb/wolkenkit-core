@@ -7,115 +7,74 @@ const buildCommand = require('../../helpers/buildCommand'),
       impersonateCommand = require('../../../appLogic/impersonateCommand');
 
 suite('impersonateCommand', () => {
-  test('is a function.', done => {
+  test('is a function.', async () => {
     assert.that(impersonateCommand).is.ofType('function');
-    done();
   });
 
-  test('throws an error if options are missing.', done => {
-    assert.that(() => {
-      impersonateCommand();
-    }).is.throwing('Options are missing.');
-    done();
+  test('throws an error if command is missing.', async () => {
+    await assert.that(async () => {
+      await impersonateCommand({});
+    }).is.throwingAsync('Command is missing.');
   });
 
-  test('throws an error if command is missing.', done => {
-    assert.that(() => {
-      impersonateCommand({});
-    }).is.throwing('Command is missing.');
-    done();
+  test('does not change the user if the command does not want to impersonate.', async () => {
+    const userId = uuid();
+
+    const command = buildCommand('planning', 'peerGroup', uuid(), 'start', {
+      initiator: 'Jane Doe',
+      destination: 'Riva'
+    });
+
+    command.addToken({
+      sub: userId
+    });
+
+    await impersonateCommand({ command });
+
+    assert.that(command.user.id).is.equalTo(userId);
   });
 
-  suite('middleware', () => {
-    test('is a function.', done => {
-      const middleware = impersonateCommand({
-        command: {}
-      });
+  test('throws an error if the command wants to impersonate, but is not allowed to.', async () => {
+    const userId = uuid();
+    const desiredUserId = uuid();
 
-      assert.that(middleware).is.ofType('function');
-      done();
+    const command = buildCommand('planning', 'peerGroup', uuid(), 'start', {
+      initiator: 'Jane Doe',
+      destination: 'Riva'
     });
 
-    test('throws an error if callback is missing.', done => {
-      const middleware = impersonateCommand({
-        command: {}
-      });
-
-      assert.that(() => {
-        middleware();
-      }).is.throwing('Callback is missing.');
-      done();
+    command.addToken({
+      sub: userId
     });
 
-    test('does not change the user if the command does not want to impersonate.', done => {
-      const userId = uuid();
+    command.custom.asUser = desiredUserId;
 
-      const command = buildCommand('planning', 'peerGroup', uuid(), 'start', {
-        initiator: 'Jane Doe',
-        destination: 'Riva'
-      });
+    await assert.that(async () => {
+      await impersonateCommand({ command });
+    }).is.throwingAsync('Impersonation denied.');
 
-      command.addToken({
-        sub: userId
-      });
+    assert.that(command.user.id).is.equalTo(userId);
+  });
 
-      const middleware = impersonateCommand({ command });
+  test('impersonates the command if the command wants to impersonate and it is allowed to.', async () => {
+    const userId = uuid();
+    const desiredUserId = uuid();
 
-      middleware(err => {
-        assert.that(err).is.null();
-        assert.that(command.user.id).is.equalTo(userId);
-        done();
-      });
+    const command = buildCommand('planning', 'peerGroup', uuid(), 'start', {
+      initiator: 'Jane Doe',
+      destination: 'Riva'
     });
 
-    test('returns an error if the command wants to impersonate, but is not allowed to.', done => {
-      const userId = uuid();
-      const desiredUserId = uuid();
-
-      const command = buildCommand('planning', 'peerGroup', uuid(), 'start', {
-        initiator: 'Jane Doe',
-        destination: 'Riva'
-      });
-
-      command.addToken({
-        sub: userId
-      });
-
-      command.custom.asUser = desiredUserId;
-
-      const middleware = impersonateCommand({ command });
-
-      middleware(err => {
-        assert.that(err).is.not.null();
-        assert.that(command.user.id).is.equalTo(userId);
-        done();
-      });
+    command.addToken({
+      sub: userId,
+      'can-impersonate': true
     });
 
-    test('impersonates the command if the command wants to impersonate and it is allowed to.', done => {
-      const userId = uuid();
-      const desiredUserId = uuid();
+    command.custom.asUser = desiredUserId;
 
-      const command = buildCommand('planning', 'peerGroup', uuid(), 'start', {
-        initiator: 'Jane Doe',
-        destination: 'Riva'
-      });
+    await impersonateCommand({ command });
 
-      command.addToken({
-        sub: userId,
-        'can-impersonate': true
-      });
-
-      command.custom.asUser = desiredUserId;
-
-      const middleware = impersonateCommand({ command });
-
-      middleware(err => {
-        assert.that(err).is.null();
-        assert.that(command.user.id).is.equalTo(desiredUserId);
-        assert.that(command.custom.asUser).is.undefined();
-        done();
-      });
-    });
+    assert.that(command.user.id).is.equalTo(desiredUserId);
+    assert.that(command.custom.asUser).is.undefined();
   });
 });
