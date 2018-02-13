@@ -3,11 +3,13 @@
 const amqp = require('amqplib'),
       retry = require('async-retry');
 
-const env = require('./env');
+const waitForRabbitMq = async function ({ url }) {
+  if (!url) {
+    throw new Error('Url is missing.');
+  }
 
-const waitForRabbitMq = async function () {
   await retry(async () => {
-    const connection = await amqp.connect(env.RABBITMQ_URL, {});
+    const connection = await amqp.connect(url, {});
 
     await connection.close();
   });
