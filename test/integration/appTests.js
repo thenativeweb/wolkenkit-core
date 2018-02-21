@@ -84,7 +84,7 @@ suite('integrationTests', function () {
 
     await new Promise(async (resolve, reject) => {
       try {
-        await runfork({
+        runfork({
           path: path.join(__dirname, '..', 'helpers', 'runResetPostgres.js'),
           env: {
             NAMESPACE: namespace,
@@ -102,7 +102,7 @@ suite('integrationTests', function () {
       }
     });
 
-    stopApp = await runfork({
+    stopApp = runfork({
       path: app,
       env: {
         APPLICATION: application,
