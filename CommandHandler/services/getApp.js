@@ -1,6 +1,6 @@
 'use strict';
 
-let app;
+const memoize = require('lodash/memoize');
 
 const getApp = function ({ repository, writeModel }) {
   if (!repository) {
@@ -10,11 +10,7 @@ const getApp = function ({ repository, writeModel }) {
     throw new Error('Write model is missing.');
   }
 
-  if (app) {
-    return app;
-  }
-
-  app = {};
+  const app = {};
 
   Object.keys(writeModel).forEach(contextName => {
     app[contextName] = {};
@@ -42,4 +38,4 @@ const getApp = function ({ repository, writeModel }) {
   return app;
 };
 
-module.exports = getApp;
+module.exports = memoize(getApp);
