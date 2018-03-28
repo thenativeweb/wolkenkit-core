@@ -1,38 +1,27 @@
 'use strict';
 
-const async = require('async');
-
 const errors = require('../errors');
 
-const process = function (options) {
-  if (!options) {
-    throw new Error('Options are missing.');
-  }
-  if (!options.command) {
+const process = async function ({ command, steps, aggregate }) {
+  if (!command) {
     throw new Error('Command is missing.');
   }
-  if (!options.steps) {
+  if (!steps) {
     throw new Error('Steps are missing.');
   }
+  if (!aggregate) {
+    throw new Error('Aggregate is missing.');
+  }
 
-  return function (aggregate, callback) {
-    if (!aggregate) {
-      throw new Error('Aggregate is missing.');
-    }
-    if (!callback) {
-      throw new Error('Callback is missing.');
-    }
+  try {
+    for (let i = 0; i < steps.length; i++) {
+      const step = steps[i];
 
-    async.series(options.steps.map(step => step({
-      command: options.command,
-      aggregate
-    })), err => {
-      if (err) {
-        return callback(new errors.CommandRejected(err.message));
-      }
-      callback(null, aggregate);
-    });
-  };
+      await step({ command, aggregate });
+    }
+  } catch (ex) {
+    throw new errors.CommandRejected(ex.message);
+  }
 };
 
 module.exports = process;

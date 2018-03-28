@@ -11,7 +11,7 @@ const Aggregate = require('../../../../repository/Aggregate'),
       buildCommand = require('../../../helpers/buildCommand'),
       isAccessGrantedToCommand = require('../../../../appLogic/preProcess/isAccessGrantedToCommand');
 
-const writeModel = new WolkenkitApplication(path.join(__dirname, '..', '..', '..', '..', 'app')).writeModel;
+const { writeModel } = new WolkenkitApplication(path.join(__dirname, '..', '..', '..', '..', 'app'));
 
 const app = tailwind.createApp({
   keys: path.join(__dirname, '..', '..', '..', 'keys'),
@@ -30,211 +30,171 @@ suite('isAccessGrantedToCommand', () => {
     token = { sub: uuid() };
   });
 
-  test('is a function.', done => {
+  test('is a function.', async () => {
     assert.that(isAccessGrantedToCommand).is.ofType('function');
-    done();
   });
 
-  test('throws an error if options are missing.', done => {
-    assert.that(() => {
-      isAccessGrantedToCommand();
-    }).is.throwing('Options are missing.');
-    done();
+  test('throws an error if aggregate is missing.', async () => {
+    await assert.that(async () => {
+      await isAccessGrantedToCommand({});
+    }).is.throwingAsync('Aggregate is missing.');
   });
 
-  test('throws an error if aggregate is missing.', done => {
-    assert.that(() => {
-      isAccessGrantedToCommand({});
-    }).is.throwing('Aggregate is missing.');
-    done();
-  });
-
-  test('throws an error if command is missing.', done => {
+  test('throws an error if command is missing.', async () => {
     const aggregate = {};
 
-    assert.that(() => {
-      isAccessGrantedToCommand({ aggregate });
-    }).is.throwing('Command is missing.');
-    done();
+    await assert.that(async () => {
+      await isAccessGrantedToCommand({ aggregate });
+    }).is.throwingAsync('Command is missing.');
   });
 
-  suite('middleware', () => {
-    test('is a function.', done => {
-      const aggregate = {},
-            command = {};
+  suite('command for owner', () => {
+    test('accepts authenticated users.', async () => {
+      const command = buildCommand('planning', 'peerGroup', aggregateId, 'startForOwner', {
+        initiator: 'Jane Doe',
+        destination: 'Riva'
+      });
 
-      const middleware = isAccessGrantedToCommand({ aggregate, command });
+      command.addToken(token);
 
-      assert.that(middleware).is.ofType('function');
-      done();
+      const aggregate = new Aggregate.Writable({
+        app,
+        writeModel,
+        context: { name: 'planning' },
+        aggregate: { name: 'peerGroup', id: aggregateId },
+        command
+      });
+
+      command.addToken({
+        sub: uuid()
+      });
+
+      await assert.that(async () => {
+        await isAccessGrantedToCommand({ aggregate, command });
+      }).is.not.throwingAsync();
     });
 
-    suite('command for owner', () => {
-      test('accepts authenticated users.', done => {
-        const command = buildCommand('planning', 'peerGroup', aggregateId, 'startForOwner', {
-          initiator: 'Jane Doe',
-          destination: 'Riva'
-        });
-
-        command.addToken(token);
-
-        const aggregate = new Aggregate.Writable({
-          app,
-          writeModel,
-          context: { name: 'planning' },
-          aggregate: { name: 'peerGroup', id: aggregateId },
-          command
-        });
-
-        const middleware = isAccessGrantedToCommand({ aggregate, command });
-
-        command.addToken({
-          sub: uuid()
-        });
-
-        middleware(err => {
-          assert.that(err).is.null();
-          done();
-        });
+    test('rejects unauthenticated users.', async () => {
+      const command = buildCommand('planning', 'peerGroup', aggregateId, 'startForOwner', {
+        initiator: 'Jane Doe',
+        destination: 'Riva'
       });
 
-      test('rejects unauthenticated users.', done => {
-        const command = buildCommand('planning', 'peerGroup', aggregateId, 'startForOwner', {
-          initiator: 'Jane Doe',
-          destination: 'Riva'
-        });
-
-        command.addToken({
-          sub: 'anonymous'
-        });
-
-        const aggregate = new Aggregate.Writable({
-          app,
-          writeModel,
-          context: { name: 'planning' },
-          aggregate: { name: 'peerGroup', id: aggregateId },
-          command
-        });
-
-        const middleware = isAccessGrantedToCommand({ aggregate, command });
-
-        middleware(err => {
-          assert.that(err).is.not.null();
-          done();
-        });
+      command.addToken({
+        sub: 'anonymous'
       });
+
+      const aggregate = new Aggregate.Writable({
+        app,
+        writeModel,
+        context: { name: 'planning' },
+        aggregate: { name: 'peerGroup', id: aggregateId },
+        command
+      });
+
+      await assert.that(async () => {
+        await isAccessGrantedToCommand({ aggregate, command });
+      }).is.throwingAsync('Access denied.');
+    });
+  });
+
+  suite('command for authenticated', () => {
+    test('accepts authenticated users.', async () => {
+      const command = buildCommand('planning', 'peerGroup', aggregateId, 'startForAuthenticated', {
+        initiator: 'Jane Doe',
+        destination: 'Riva'
+      });
+
+      command.addToken(token);
+
+      const aggregate = new Aggregate.Writable({
+        app,
+        writeModel,
+        context: { name: 'planning' },
+        aggregate: { name: 'peerGroup', id: aggregateId },
+        command
+      });
+
+      command.addToken({
+        sub: uuid()
+      });
+
+      await assert.that(async () => {
+        await isAccessGrantedToCommand({ aggregate, command });
+      }).is.not.throwingAsync();
     });
 
-    suite('command for authenticated', () => {
-      test('accepts authenticated users.', done => {
-        const command = buildCommand('planning', 'peerGroup', aggregateId, 'startForAuthenticated', {
-          initiator: 'Jane Doe',
-          destination: 'Riva'
-        });
-
-        command.addToken(token);
-
-        const aggregate = new Aggregate.Writable({
-          app,
-          writeModel,
-          context: { name: 'planning' },
-          aggregate: { name: 'peerGroup', id: aggregateId },
-          command
-        });
-
-        const middleware = isAccessGrantedToCommand({ aggregate, command });
-
-        command.addToken({
-          sub: uuid()
-        });
-
-        middleware(err => {
-          assert.that(err).is.null();
-          done();
-        });
+    test('rejects unauthenticated users.', async () => {
+      const command = buildCommand('planning', 'peerGroup', aggregateId, 'startForAuthenticated', {
+        initiator: 'Jane Doe',
+        destination: 'Riva'
       });
 
-      test('rejects unauthenticated users.', done => {
-        const command = buildCommand('planning', 'peerGroup', aggregateId, 'startForAuthenticated', {
-          initiator: 'Jane Doe',
-          destination: 'Riva'
-        });
-
-        command.addToken({
-          sub: 'anonymous'
-        });
-
-        const aggregate = new Aggregate.Writable({
-          app,
-          writeModel,
-          context: { name: 'planning' },
-          aggregate: { name: 'peerGroup', id: aggregateId },
-          command
-        });
-
-        const middleware = isAccessGrantedToCommand({ aggregate, command });
-
-        middleware(err => {
-          assert.that(err).is.not.null();
-          done();
-        });
+      command.addToken({
+        sub: 'anonymous'
       });
+
+      const aggregate = new Aggregate.Writable({
+        app,
+        writeModel,
+        context: { name: 'planning' },
+        aggregate: { name: 'peerGroup', id: aggregateId },
+        command
+      });
+
+      await assert.that(async () => {
+        await isAccessGrantedToCommand({ aggregate, command });
+      }).is.throwingAsync('Access denied.');
+    });
+  });
+
+  suite('command for public', () => {
+    test('accepts authenticated users.', async () => {
+      const command = buildCommand('planning', 'peerGroup', aggregateId, 'start', {
+        initiator: 'Jane Doe',
+        destination: 'Riva'
+      });
+
+      command.addToken(token);
+
+      const aggregate = new Aggregate.Writable({
+        app,
+        writeModel,
+        context: { name: 'planning' },
+        aggregate: { name: 'peerGroup', id: aggregateId },
+        command
+      });
+
+      command.addToken({
+        sub: uuid()
+      });
+
+      await assert.that(async () => {
+        await isAccessGrantedToCommand({ aggregate, command });
+      }).is.not.throwingAsync();
     });
 
-    suite('command for public', () => {
-      test('accepts authenticated users.', done => {
-        const command = buildCommand('planning', 'peerGroup', aggregateId, 'start', {
-          initiator: 'Jane Doe',
-          destination: 'Riva'
-        });
-
-        command.addToken(token);
-
-        const aggregate = new Aggregate.Writable({
-          app,
-          writeModel,
-          context: { name: 'planning' },
-          aggregate: { name: 'peerGroup', id: aggregateId },
-          command
-        });
-
-        const middleware = isAccessGrantedToCommand({ aggregate, command });
-
-        command.addToken({
-          sub: uuid()
-        });
-
-        middleware(err => {
-          assert.that(err).is.null();
-          done();
-        });
+    test('accepts unauthenticated users.', async () => {
+      const command = buildCommand('planning', 'peerGroup', aggregateId, 'start', {
+        initiator: 'Jane Doe',
+        destination: 'Riva'
       });
 
-      test('accepts unauthenticated users.', done => {
-        const command = buildCommand('planning', 'peerGroup', aggregateId, 'start', {
-          initiator: 'Jane Doe',
-          destination: 'Riva'
-        });
-
-        command.addToken({
-          sub: 'anonymous'
-        });
-
-        const aggregate = new Aggregate.Writable({
-          app,
-          writeModel,
-          context: { name: 'planning' },
-          aggregate: { name: 'peerGroup', id: aggregateId },
-          command
-        });
-
-        const middleware = isAccessGrantedToCommand({ aggregate, command });
-
-        middleware(err => {
-          assert.that(err).is.null();
-          done();
-        });
+      command.addToken({
+        sub: 'anonymous'
       });
+
+      const aggregate = new Aggregate.Writable({
+        app,
+        writeModel,
+        context: { name: 'planning' },
+        aggregate: { name: 'peerGroup', id: aggregateId },
+        command
+      });
+
+      await assert.that(async () => {
+        await isAccessGrantedToCommand({ aggregate, command });
+      }).is.not.throwingAsync();
     });
   });
 });

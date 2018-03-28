@@ -1,29 +1,16 @@
 'use strict';
 
-const loadAggregate = function (options) {
-  if (!options) {
-    throw new Error('Options are missing.');
-  }
-  if (!options.command) {
+const loadAggregate = async function ({ command, repository }) {
+  if (!command) {
     throw new Error('Command is missing.');
   }
-  if (!options.repository) {
+  if (!repository) {
     throw new Error('Repository is missing.');
   }
 
-  return function (callback) {
-    if (!callback) {
-      throw new Error('Callback is missing.');
-    }
+  const aggregate = await repository.loadAggregateFor(command);
 
-    options.repository.loadAggregateFor(options.command, (err, aggregate) => {
-      if (err) {
-        return callback(err);
-      }
-
-      callback(null, aggregate);
-    });
-  };
+  return aggregate;
 };
 
 module.exports = loadAggregate;

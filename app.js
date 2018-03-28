@@ -8,92 +8,88 @@ const processEnv = require('processenv'),
 
 const eventStore = require(`sparbuch/${processEnv('EVENTSTORE_TYPE')}`);
 
-const getPublishEvents = require('./appLogic/publishEvents'),
-      logic = require('./appLogic'),
+const logic = require('./appLogic'),
+      publishEvents = require('./appLogic/publishEvents'),
       repository = require('./repository');
 
-const app = tailwind.createApp({
-  profiling: {
-    host: processEnv('PROFILING_HOST'),
-    port: processEnv('PROFILING_PORT')
-  }
-});
+(async () => {
+  const app = tailwind.createApp({
+    profiling: {
+      host: processEnv('PROFILING_HOST'),
+      port: processEnv('PROFILING_PORT')
+    }
+  });
 
-const applicationDirectory = path.join(app.dirname, 'app');
-const writeModel = new WolkenkitApplication(applicationDirectory).writeModel;
+  const applicationDirectory = path.join(app.dirname, 'app');
+  const { writeModel } = new WolkenkitApplication(applicationDirectory);
 
-app.run([
-  done => {
-    eventStore.initialize({
-      url: app.env('EVENTSTORE_URL'),
-      namespace: `${app.env('APPLICATION')}domain`
-    }, done);
-  },
-  done => {
-    repository.initialize({ app, writeModel, eventStore }, done);
-  },
-  done => {
-    app.eventbus.use(new app.wires.eventbus.amqp.Sender({
-      url: app.env('EVENTBUS_URL'),
-      application: app.env('APPLICATION')
-    }), done);
-  },
-  done => {
-    app.flowbus.use(new app.wires.flowbus.amqp.Sender({
-      url: app.env('FLOWBUS_URL'),
-      application: app.env('APPLICATION')
-    }), done);
-  },
-  done => {
-    const publishEvents = getPublishEvents({ eventbus: app.eventbus, flowbus: app.flowbus, eventStore });
+  await eventStore.initialize({
+    url: app.env('EVENTSTORE_URL'),
+    namespace: `${app.env('APPLICATION')}domain`
+  });
 
-    eventStore.getUnpublishedEventStream((errGetUnpublishedEvents, eventStream) => {
-      if (errGetUnpublishedEvents) {
-        return done(errGetUnpublishedEvents);
+  repository.initialize({ app, writeModel, eventStore });
+
+  await app.eventbus.use(new app.wires.eventbus.amqp.Sender({
+    url: app.env('EVENTBUS_URL'),
+    application: app.env('APPLICATION')
+  }));
+
+  await app.flowbus.use(new app.wires.flowbus.amqp.Sender({
+    url: app.env('FLOWBUS_URL'),
+    application: app.env('APPLICATION')
+  }));
+
+  const eventStream = await eventStore.getUnpublishedEventStream();
+
+  await new Promise((resolve, reject) => {
+    let onData,
+        onEnd,
+        onError;
+
+    const unsubscribe = function () {
+      eventStream.removeListener('data', onData);
+      eventStream.removeListener('end', onEnd);
+      eventStream.removeListener('error', onError);
+    };
+
+    onData = async function (event) {
+      eventStream.pause();
+
+      try {
+        await publishEvents({
+          eventbus: app.eventbus,
+          flowbus: app.flowbus,
+          eventStore,
+          aggregateId: event.aggregate.id,
+          committedEvents: [ event ]
+        });
+      } catch (ex) {
+        return reject(ex);
       }
 
-      let onData,
-          onEnd,
-          onError;
+      eventStream.resume();
+    };
 
-      const unsubscribe = function () {
-        eventStream.removeListener('data', onData);
-        eventStream.removeListener('end', onEnd);
-        eventStream.removeListener('error', onError);
-      };
+    onEnd = function () {
+      unsubscribe();
+      resolve();
+    };
 
-      onData = function (event) {
-        eventStream.pause();
-        publishEvents(event.aggregate.id, [ event ], err => {
-          if (err) {
-            return done(err);
-          }
-          eventStream.resume();
-        });
-      };
+    onError = function (err) {
+      unsubscribe();
+      reject(err);
+    };
 
-      onEnd = function () {
-        unsubscribe();
-        done(null);
-      };
+    eventStream.on('data', onData);
+    eventStream.on('end', onEnd);
+    eventStream.on('error', onError);
+  });
 
-      onError = function (err) {
-        unsubscribe();
-        done(err);
-      };
+  await app.commandbus.use(new app.wires.commandbus.amqp.Receiver({
+    url: app.env('COMMANDBUS_URL'),
+    application: app.env('APPLICATION')
+  }));
 
-      eventStream.on('data', onData);
-      eventStream.on('end', onEnd);
-      eventStream.on('error', onError);
-    });
-  },
-  done => {
-    app.commandbus.use(new app.wires.commandbus.amqp.Receiver({
-      url: app.env('COMMANDBUS_URL'),
-      application: app.env('APPLICATION')
-    }), done);
-  },
-  () => {
-    logic({ app, writeModel, eventStore });
-  }
-]);
+  logic({ app, writeModel, eventStore });
+})();

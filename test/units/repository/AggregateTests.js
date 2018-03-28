@@ -10,43 +10,31 @@ const assert = require('assertthat'),
 const Aggregate = require('../../../repository/Aggregate'),
       buildCommand = require('../../helpers/buildCommand');
 
-const writeModel = new WolkenkitApplication(path.join(__dirname, '..', '..', '..', 'app')).writeModel;
+const { writeModel } = new WolkenkitApplication(path.join(__dirname, '..', '..', '..', 'app'));
 
 suite('Aggregate', () => {
   suite('Readable', () => {
-    test('is a function.', done => {
+    test('is a function.', async () => {
       assert.that(Aggregate.Readable).is.ofType('function');
-      done();
     });
 
-    test('throws an error if options are missing.', done => {
-      assert.that(() => {
-        /* eslint-disable no-new */
-        new Aggregate.Readable();
-        /* eslint-enable no-new */
-      }).is.throwing('Options are missing.');
-      done();
-    });
-
-    test('throws an error if write model is missing.', done => {
+    test('throws an error if write model is missing.', async () => {
       assert.that(() => {
         /* eslint-disable no-new */
         new Aggregate.Readable({});
         /* eslint-enable no-new */
       }).is.throwing('Write model is missing.');
-      done();
     });
 
-    test('throws an error if context is missing.', done => {
+    test('throws an error if context is missing.', async () => {
       assert.that(() => {
         /* eslint-disable no-new */
         new Aggregate.Readable({ writeModel });
         /* eslint-enable no-new */
       }).is.throwing('Context is missing.');
-      done();
     });
 
-    test('throws an error if context name is missing.', done => {
+    test('throws an error if context name is missing.', async () => {
       assert.that(() => {
         /* eslint-disable no-new */
         new Aggregate.Readable({
@@ -55,10 +43,9 @@ suite('Aggregate', () => {
         });
         /* eslint-enable no-new */
       }).is.throwing('Context name is missing.');
-      done();
     });
 
-    test('throws an error if aggregate is missing.', done => {
+    test('throws an error if aggregate is missing.', async () => {
       assert.that(() => {
         /* eslint-disable no-new */
         new Aggregate.Readable({
@@ -67,10 +54,9 @@ suite('Aggregate', () => {
         });
         /* eslint-enable no-new */
       }).is.throwing('Aggregate is missing.');
-      done();
     });
 
-    test('throws an error if aggregate name is missing.', done => {
+    test('throws an error if aggregate name is missing.', async () => {
       assert.that(() => {
         /* eslint-disable no-new */
         new Aggregate.Readable({
@@ -80,10 +66,9 @@ suite('Aggregate', () => {
         });
         /* eslint-enable no-new */
       }).is.throwing('Aggregate name is missing.');
-      done();
     });
 
-    test('throws an error if aggregate id is missing.', done => {
+    test('throws an error if aggregate id is missing.', async () => {
       assert.that(() => {
         /* eslint-disable no-new */
         new Aggregate.Readable({
@@ -93,10 +78,9 @@ suite('Aggregate', () => {
         });
         /* eslint-enable no-new */
       }).is.throwing('Aggregate id is missing.');
-      done();
     });
 
-    test('throws an error if context does not exist.', done => {
+    test('throws an error if context does not exist.', async () => {
       assert.that(() => {
         /* eslint-disable no-new */
         new Aggregate.Readable({
@@ -106,10 +90,9 @@ suite('Aggregate', () => {
         });
         /* eslint-enable no-new */
       }).is.throwing('Context does not exist.');
-      done();
     });
 
-    test('throws an error if aggregate does not exist.', done => {
+    test('throws an error if aggregate does not exist.', async () => {
       assert.that(() => {
         /* eslint-disable no-new */
         new Aggregate.Readable({
@@ -119,11 +102,10 @@ suite('Aggregate', () => {
         });
         /* eslint-enable no-new */
       }).is.throwing('Aggregate does not exist.');
-      done();
     });
 
     suite('definition', () => {
-      test('contains the appropriate aggregate definition from the write model.', done => {
+      test('contains the appropriate aggregate definition from the write model.', async () => {
         const aggregate = new Aggregate.Readable({
           writeModel,
           context: { name: 'planning' },
@@ -136,13 +118,12 @@ suite('Aggregate', () => {
         assert.that(aggregate.definition.commands.join).is.ofType('array');
         assert.that(aggregate.definition.events.started).is.ofType('function');
         assert.that(aggregate.definition.events.joined).is.ofType('function');
-        done();
       });
     });
 
     suite('instance', () => {
       suite('id', () => {
-        test('contains the requested aggregate\'s id.', done => {
+        test('contains the requested aggregate\'s id.', async () => {
           const aggregateId = uuid();
 
           const aggregate = new Aggregate.Readable({
@@ -152,12 +133,11 @@ suite('Aggregate', () => {
           });
 
           assert.that(aggregate.instance.id).is.equalTo(aggregateId);
-          done();
         });
       });
 
       suite('revision', () => {
-        test('is 0.', done => {
+        test('is 0.', async () => {
           const aggregate = new Aggregate.Readable({
             writeModel,
             context: { name: 'planning' },
@@ -165,12 +145,11 @@ suite('Aggregate', () => {
           });
 
           assert.that(aggregate.instance.revision).is.equalTo(0);
-          done();
         });
       });
 
       suite('uncommitted events', () => {
-        test('is an empty array.', done => {
+        test('is an empty array.', async () => {
           const aggregate = new Aggregate.Readable({
             writeModel,
             context: { name: 'planning' },
@@ -178,12 +157,11 @@ suite('Aggregate', () => {
           });
 
           assert.that(aggregate.instance.uncommittedEvents).is.equalTo([]);
-          done();
         });
       });
 
       suite('exists', () => {
-        test('is a function.', done => {
+        test('is a function.', async () => {
           const aggregateId = uuid();
 
           const aggregate = new Aggregate.Readable({
@@ -193,10 +171,9 @@ suite('Aggregate', () => {
           });
 
           assert.that(aggregate.instance.exists).is.ofType('function');
-          done();
         });
 
-        test('returns false if revision is 0.', done => {
+        test('returns false if revision is 0.', async () => {
           const aggregateId = uuid();
 
           const aggregate = new Aggregate.Readable({
@@ -206,10 +183,9 @@ suite('Aggregate', () => {
           });
 
           assert.that(aggregate.instance.exists()).is.false();
-          done();
         });
 
-        test('returns true if revision is greater than 0.', done => {
+        test('returns true if revision is greater than 0.', async () => {
           const aggregateId = uuid();
 
           const aggregate = new Aggregate.Readable({
@@ -226,7 +202,6 @@ suite('Aggregate', () => {
           aggregate.applySnapshot(snapshot);
 
           assert.that(aggregate.instance.exists()).is.true();
-          done();
         });
       });
     });
@@ -234,7 +209,7 @@ suite('Aggregate', () => {
     suite('api', () => {
       suite('forReadOnly', () => {
         suite('state', () => {
-          test('contains the initial state.', done => {
+          test('contains the initial state.', async () => {
             const aggregate = new Aggregate.Readable({
               writeModel,
               context: { name: 'planning' },
@@ -242,10 +217,9 @@ suite('Aggregate', () => {
             });
 
             assert.that(aggregate.api.forReadOnly.state).is.equalTo(writeModel.planning.peerGroup.initialState);
-            done();
           });
 
-          test('is a deep copy.', done => {
+          test('is a deep copy.', async () => {
             const aggregate = new Aggregate.Readable({
               writeModel,
               context: { name: 'planning' },
@@ -253,12 +227,11 @@ suite('Aggregate', () => {
             });
 
             assert.that(aggregate.api.forReadOnly.state).is.not.sameAs(writeModel.planning.peerGroup.initialState);
-            done();
           });
         });
 
         suite('exists', () => {
-          test('references the instance exists function.', done => {
+          test('references the instance exists function.', async () => {
             const aggregateId = uuid();
 
             const aggregate = new Aggregate.Readable({
@@ -268,14 +241,13 @@ suite('Aggregate', () => {
             });
 
             assert.that(aggregate.api.forReadOnly.exists).is.sameAs(aggregate.instance.exists);
-            done();
           });
         });
       });
 
       suite('forEvents', () => {
         suite('state', () => {
-          test('references the read-only api state.', done => {
+          test('references the read-only api state.', async () => {
             const aggregate = new Aggregate.Readable({
               writeModel,
               context: { name: 'planning' },
@@ -283,12 +255,11 @@ suite('Aggregate', () => {
             });
 
             assert.that(aggregate.api.forEvents.state).is.sameAs(aggregate.api.forReadOnly.state);
-            done();
           });
         });
 
         suite('setState', () => {
-          test('is a function.', done => {
+          test('is a function.', async () => {
             const aggregate = new Aggregate.Readable({
               writeModel,
               context: { name: 'planning' },
@@ -296,10 +267,9 @@ suite('Aggregate', () => {
             });
 
             assert.that(aggregate.api.forEvents.setState).is.ofType('function');
-            done();
           });
 
-          test('updates the state.', done => {
+          test('updates the state.', async () => {
             const aggregate = new Aggregate.Readable({
               writeModel,
               context: { name: 'planning' },
@@ -318,14 +288,13 @@ suite('Aggregate', () => {
             assert.that(aggregate.api.forEvents.state.initiator).is.equalTo('Jane Doe');
             assert.that(aggregate.api.forEvents.state.destination).is.undefined();
             assert.that(aggregate.api.forEvents.state.participants).is.equalTo([ 'Jane Doe' ]);
-            done();
           });
         });
       });
     });
 
     suite('applySnapshot', () => {
-      test('is a function.', done => {
+      test('is a function.', async () => {
         const aggregate = new Aggregate.Readable({
           writeModel,
           context: { name: 'planning' },
@@ -333,10 +302,9 @@ suite('Aggregate', () => {
         });
 
         assert.that(aggregate.applySnapshot).is.ofType('function');
-        done();
       });
 
-      test('throws an error if snapshot is missing.', done => {
+      test('throws an error if snapshot is missing.', async () => {
         const aggregate = new Aggregate.Readable({
           writeModel,
           context: { name: 'planning' },
@@ -346,10 +314,9 @@ suite('Aggregate', () => {
         assert.that(() => {
           aggregate.applySnapshot();
         }).is.throwing('Snapshot is missing.');
-        done();
       });
 
-      test('overwrites the revision.', done => {
+      test('overwrites the revision.', async () => {
         const aggregate = new Aggregate.Readable({
           writeModel,
           context: { name: 'planning' },
@@ -364,10 +331,9 @@ suite('Aggregate', () => {
         aggregate.applySnapshot(snapshot);
 
         assert.that(aggregate.instance.revision).is.equalTo(23);
-        done();
       });
 
-      test('overwrites the state.', done => {
+      test('overwrites the state.', async () => {
         const aggregate = new Aggregate.Readable({
           writeModel,
           context: { name: 'planning' },
@@ -383,7 +349,6 @@ suite('Aggregate', () => {
 
         assert.that(aggregate.api.forReadOnly.state).is.equalTo(snapshot.state);
         assert.that(aggregate.api.forEvents.state).is.sameAs(aggregate.api.forReadOnly.state);
-        done();
       });
     });
   });
@@ -401,57 +366,43 @@ suite('Aggregate', () => {
       });
     });
 
-    test('is a function.', done => {
+    test('is a function.', async () => {
       assert.that(Aggregate.Writable).is.ofType('function');
-      done();
     });
 
-    test('throws an error if options are missing.', done => {
-      assert.that(() => {
-        /* eslint-disable no-new */
-        new Aggregate.Writable();
-        /* eslint-enable no-new */
-      }).is.throwing('Options are missing.');
-      done();
-    });
-
-    test('throws an error if app is missing.', done => {
+    test('throws an error if app is missing.', async () => {
       assert.that(() => {
         /* eslint-disable no-new */
         new Aggregate.Writable({});
         /* eslint-enable no-new */
       }).is.throwing('App is missing.');
-      done();
     });
 
-    test('throws an error if write model is missing.', done => {
+    test('throws an error if write model is missing.', async () => {
       assert.that(() => {
         /* eslint-disable no-new */
         new Aggregate.Writable({ app });
         /* eslint-enable no-new */
       }).is.throwing('Write model is missing.');
-      done();
     });
 
-    test('throws an error if context is missing.', done => {
+    test('throws an error if context is missing.', async () => {
       assert.that(() => {
         /* eslint-disable no-new */
         new Aggregate.Writable({ app, writeModel });
         /* eslint-enable no-new */
       }).is.throwing('Context is missing.');
-      done();
     });
 
-    test('throws an error if context name is missing.', done => {
+    test('throws an error if context name is missing.', async () => {
       assert.that(() => {
         /* eslint-disable no-new */
         new Aggregate.Writable({ app, writeModel, context: {}});
         /* eslint-enable no-new */
       }).is.throwing('Context name is missing.');
-      done();
     });
 
-    test('throws an error if aggregate is missing.', done => {
+    test('throws an error if aggregate is missing.', async () => {
       assert.that(() => {
         /* eslint-disable no-new */
         new Aggregate.Writable({
@@ -461,10 +412,9 @@ suite('Aggregate', () => {
         });
         /* eslint-enable no-new */
       }).is.throwing('Aggregate is missing.');
-      done();
     });
 
-    test('throws an error if aggregate name is missing.', done => {
+    test('throws an error if aggregate name is missing.', async () => {
       assert.that(() => {
         /* eslint-disable no-new */
         new Aggregate.Writable({
@@ -475,10 +425,9 @@ suite('Aggregate', () => {
         });
         /* eslint-enable no-new */
       }).is.throwing('Aggregate name is missing.');
-      done();
     });
 
-    test('throws an error if aggregate id is missing.', done => {
+    test('throws an error if aggregate id is missing.', async () => {
       assert.that(() => {
         /* eslint-disable no-new */
         new Aggregate.Writable({
@@ -489,10 +438,9 @@ suite('Aggregate', () => {
         });
         /* eslint-enable no-new */
       }).is.throwing('Aggregate id is missing.');
-      done();
     });
 
-    test('throws an error if command is missing.', done => {
+    test('throws an error if command is missing.', async () => {
       assert.that(() => {
         /* eslint-disable no-new */
         new Aggregate.Writable({
@@ -503,10 +451,9 @@ suite('Aggregate', () => {
         });
         /* eslint-enable no-new */
       }).is.throwing('Command is missing.');
-      done();
     });
 
-    test('derives from Readable.', done => {
+    test('derives from Readable.', async () => {
       const aggregateId = uuid();
 
       const command = buildCommand('planning', 'peerGroup', aggregateId, 'join', {
@@ -537,13 +484,12 @@ suite('Aggregate', () => {
       assert.that(aggregate.api.forEvents.setState).is.ofType('function');
 
       assert.that(aggregate.applySnapshot).is.ofType('function');
-      done();
     });
 
     suite('api', () => {
       suite('forCommands', () => {
         suite('state', () => {
-          test('references the read-only api state.', done => {
+          test('references the read-only api state.', async () => {
             const aggregateId = uuid();
 
             const command = buildCommand('planning', 'peerGroup', aggregateId, 'join', {
@@ -559,12 +505,11 @@ suite('Aggregate', () => {
             });
 
             assert.that(aggregate.api.forCommands.state).is.sameAs(aggregate.api.forReadOnly.state);
-            done();
           });
         });
 
         suite('exists', () => {
-          test('references the instance exists function.', done => {
+          test('references the instance exists function.', async () => {
             const aggregateId = uuid();
 
             const command = buildCommand('planning', 'peerGroup', aggregateId, 'join', {
@@ -580,13 +525,12 @@ suite('Aggregate', () => {
             });
 
             assert.that(aggregate.api.forCommands.exists).is.sameAs(aggregate.instance.exists);
-            done();
           });
         });
 
         suite('events', () => {
           suite('publish', () => {
-            test('is a function.', done => {
+            test('is a function.', async () => {
               const aggregateId = uuid();
 
               const command = buildCommand('planning', 'peerGroup', aggregateId, 'join', {
@@ -602,10 +546,9 @@ suite('Aggregate', () => {
               });
 
               assert.that(aggregate.api.forCommands.events.publish).is.ofType('function');
-              done();
             });
 
-            test('throws an error if name is missing.', done => {
+            test('throws an error if name is missing.', async () => {
               const aggregateId = uuid();
 
               const command = buildCommand('planning', 'peerGroup', aggregateId, 'join', {
@@ -623,10 +566,9 @@ suite('Aggregate', () => {
               assert.that(() => {
                 aggregate.api.forCommands.events.publish();
               }).is.throwing('Event name is missing.');
-              done();
             });
 
-            test('throws an error if a non-existent name is given.', done => {
+            test('throws an error if a non-existent name is given.', async () => {
               const aggregateId = uuid();
 
               const command = buildCommand('planning', 'peerGroup', aggregateId, 'join', {
@@ -644,10 +586,9 @@ suite('Aggregate', () => {
               assert.that(() => {
                 aggregate.api.forCommands.events.publish('non-existent');
               }).is.throwing('Unknown event.');
-              done();
             });
 
-            test('does not throw an error if data is missing.', done => {
+            test('does not throw an error if data is missing.', async () => {
               const aggregateId = uuid();
 
               const command = buildCommand('planning', 'peerGroup', aggregateId, 'join', {
@@ -669,10 +610,9 @@ suite('Aggregate', () => {
               assert.that(() => {
                 aggregate.api.forCommands.events.publish('joined');
               }).is.not.throwing();
-              done();
             });
 
-            test('creates a new event and adds it to the list of uncommitted events.', done => {
+            test('creates a new event and adds it to the list of uncommitted events.', async () => {
               const aggregateId = uuid();
 
               const command = buildCommand('planning', 'peerGroup', aggregateId, 'join', {
@@ -719,10 +659,9 @@ suite('Aggregate', () => {
               });
               assert.that(aggregate.instance.uncommittedEvents[1].user.id).is.equalTo(token.sub);
               assert.that(aggregate.instance.uncommittedEvents[1].metadata.revision).is.equalTo(2);
-              done();
             });
 
-            test('sets the correlation and the causation id of the new event.', done => {
+            test('sets the correlation and the causation id of the new event.', async () => {
               const aggregateId = uuid();
 
               const command = buildCommand('planning', 'peerGroup', aggregateId, 'join', {
@@ -754,11 +693,10 @@ suite('Aggregate', () => {
               assert.that(aggregate.instance.uncommittedEvents[0].metadata.causationId).is.equalTo(command.id);
               assert.that(aggregate.instance.uncommittedEvents[1].metadata.correlationId).is.equalTo(command.metadata.correlationId);
               assert.that(aggregate.instance.uncommittedEvents[1].metadata.causationId).is.equalTo(command.id);
-              done();
             });
 
             suite('creates a new event and adds authorization metadata', () => {
-              test('using the aggregate owner.', done => {
+              test('using the aggregate owner.', async () => {
                 const aggregateId = uuid();
                 const ownerId = uuid();
 
@@ -792,10 +730,9 @@ suite('Aggregate', () => {
                   forAuthenticated: false,
                   forPublic: true
                 });
-                done();
               });
 
-              test('using the user that sent the command if no aggregate owner is set.', done => {
+              test('using the user that sent the command if no aggregate owner is set.', async () => {
                 const aggregateId = uuid();
 
                 const command = buildCommand('planning', 'peerGroup', aggregateId, 'join', {
@@ -824,10 +761,9 @@ suite('Aggregate', () => {
                   forAuthenticated: false,
                   forPublic: true
                 });
-                done();
               });
 
-              test('using anonymous if the command was sent anonymously and no aggregate owner is set.', done => {
+              test('using anonymous if the command was sent anonymously and no aggregate owner is set.', async () => {
                 const aggregateId = uuid();
 
                 const command = buildCommand('planning', 'peerGroup', aggregateId, 'join', {
@@ -856,11 +792,10 @@ suite('Aggregate', () => {
                   forAuthenticated: false,
                   forPublic: true
                 });
-                done();
               });
             });
 
-            test('does not increase the aggregate revision.', done => {
+            test('does not increase the aggregate revision.', async () => {
               const aggregateId = uuid();
 
               const command = buildCommand('planning', 'peerGroup', aggregateId, 'join', {
@@ -884,10 +819,9 @@ suite('Aggregate', () => {
               });
 
               assert.that(aggregate.instance.revision).is.equalTo(0);
-              done();
             });
 
-            test('updates the aggregate state.', done => {
+            test('updates the aggregate state.', async () => {
               const aggregateId = uuid();
 
               const command = buildCommand('planning', 'peerGroup', aggregateId, 'join', {
@@ -911,13 +845,12 @@ suite('Aggregate', () => {
               });
 
               assert.that(aggregate.api.forCommands.state.participants).is.equalTo([ 'Jane Doe' ]);
-              done();
             });
           });
         });
 
         suite('transferOwnership', () => {
-          test('is a function.', done => {
+          test('is a function.', async () => {
             const aggregateId = uuid();
 
             const command = buildCommand('planning', 'peerGroup', aggregateId, 'join', {
@@ -933,10 +866,9 @@ suite('Aggregate', () => {
             });
 
             assert.that(aggregate.api.forCommands.transferOwnership).is.ofType('function');
-            done();
           });
 
-          test('throws an error if data is missing.', done => {
+          test('throws an error if data is missing.', async () => {
             const aggregateId = uuid();
 
             const command = buildCommand('planning', 'peerGroup', aggregateId, 'join', {
@@ -954,10 +886,9 @@ suite('Aggregate', () => {
             assert.that(() => {
               aggregate.api.forCommands.transferOwnership();
             }).is.throwing('Data is missing.');
-            done();
           });
 
-          test('throws an error if new owner is missing.', done => {
+          test('throws an error if new owner is missing.', async () => {
             const aggregateId = uuid();
 
             const command = buildCommand('planning', 'peerGroup', aggregateId, 'join', {
@@ -975,10 +906,9 @@ suite('Aggregate', () => {
             assert.that(() => {
               aggregate.api.forCommands.transferOwnership({});
             }).is.throwing('Owner is missing.');
-            done();
           });
 
-          test('throws an error if new owner is the current owner.', done => {
+          test('throws an error if new owner is the current owner.', async () => {
             const aggregateId = uuid(),
                   currentOwnerId = uuid();
 
@@ -1005,10 +935,9 @@ suite('Aggregate', () => {
                 to: currentOwnerId
               });
             }).is.throwing('Could not transfer ownership to current owner.');
-            done();
           });
 
-          test('publishes a transferredOwnership event.', done => {
+          test('publishes a transferredOwnership event.', async () => {
             const aggregateId = uuid(),
                   currentOwnerId = uuid(),
                   newOwnerId = uuid();
@@ -1044,12 +973,11 @@ suite('Aggregate', () => {
               from: currentOwnerId,
               to: newOwnerId
             });
-            done();
           });
         });
 
         suite('authorize', () => {
-          test('is a function.', done => {
+          test('is a function.', async () => {
             const aggregateId = uuid();
 
             const command = buildCommand('planning', 'peerGroup', aggregateId, 'join', {
@@ -1065,10 +993,9 @@ suite('Aggregate', () => {
             });
 
             assert.that(aggregate.api.forCommands.authorize).is.ofType('function');
-            done();
           });
 
-          test('throws an error if data is missing.', done => {
+          test('throws an error if data is missing.', async () => {
             const aggregateId = uuid();
 
             const command = buildCommand('planning', 'peerGroup', aggregateId, 'join', {
@@ -1086,10 +1013,9 @@ suite('Aggregate', () => {
             assert.that(() => {
               aggregate.api.forCommands.authorize();
             }).is.throwing('Data is missing.');
-            done();
           });
 
-          test('throws an error if commands and events are missing.', done => {
+          test('throws an error if commands and events are missing.', async () => {
             const aggregateId = uuid();
 
             const command = buildCommand('planning', 'peerGroup', aggregateId, 'join', {
@@ -1107,10 +1033,9 @@ suite('Aggregate', () => {
             assert.that(() => {
               aggregate.api.forCommands.authorize({});
             }).is.throwing('Commands and events are missing.');
-            done();
           });
 
-          test('throws an error if an unknown command is given.', done => {
+          test('throws an error if an unknown command is given.', async () => {
             const aggregateId = uuid();
 
             const command = buildCommand('planning', 'peerGroup', aggregateId, 'join', {
@@ -1132,10 +1057,9 @@ suite('Aggregate', () => {
                 }
               });
             }).is.throwing('Unknown command.');
-            done();
           });
 
-          test('throws an error if an unknown event is given.', done => {
+          test('throws an error if an unknown event is given.', async () => {
             const aggregateId = uuid();
 
             const command = buildCommand('planning', 'peerGroup', aggregateId, 'join', {
@@ -1157,10 +1081,9 @@ suite('Aggregate', () => {
                 }
               });
             }).is.throwing('Unknown event.');
-            done();
           });
 
-          test('throws an error if no commands are given.', done => {
+          test('throws an error if no commands are given.', async () => {
             const aggregateId = uuid();
 
             const command = buildCommand('planning', 'peerGroup', aggregateId, 'join', {
@@ -1180,10 +1103,9 @@ suite('Aggregate', () => {
                 commands: {}
               });
             }).is.throwing('Command is missing.');
-            done();
           });
 
-          test('throws an error if authorization options for command are missing.', done => {
+          test('throws an error if authorization options for command are missing.', async () => {
             const aggregateId = uuid();
 
             const command = buildCommand('planning', 'peerGroup', aggregateId, 'join', {
@@ -1205,10 +1127,9 @@ suite('Aggregate', () => {
                 }
               });
             }).is.throwing('Missing authorization options.');
-            done();
           });
 
-          test('throws an error if authorization options for event are missing.', done => {
+          test('throws an error if authorization options for event are missing.', async () => {
             const aggregateId = uuid();
 
             const command = buildCommand('planning', 'peerGroup', aggregateId, 'join', {
@@ -1230,10 +1151,9 @@ suite('Aggregate', () => {
                 }
               });
             }).is.throwing('Missing authorization options.');
-            done();
           });
 
-          test('throws an error if authorization options for command are non-boolean.', done => {
+          test('throws an error if authorization options for command are non-boolean.', async () => {
             const aggregateId = uuid();
 
             const command = buildCommand('planning', 'peerGroup', aggregateId, 'join', {
@@ -1255,10 +1175,9 @@ suite('Aggregate', () => {
                 }
               });
             }).is.throwing('Invalid authorization option.');
-            done();
           });
 
-          test('throws an error if authorization options for event are non-boolean.', done => {
+          test('throws an error if authorization options for event are non-boolean.', async () => {
             const aggregateId = uuid();
 
             const command = buildCommand('planning', 'peerGroup', aggregateId, 'join', {
@@ -1280,10 +1199,9 @@ suite('Aggregate', () => {
                 }
               });
             }).is.throwing('Invalid authorization option.');
-            done();
           });
 
-          test('publishes an authorized event.', done => {
+          test('publishes an authorized event.', async () => {
             const aggregateId = uuid(),
                   ownerId = uuid();
 
@@ -1327,14 +1245,13 @@ suite('Aggregate', () => {
                 joined: { forAuthenticated: false }
               }
             });
-            done();
           });
         });
       });
     });
 
     suite('applySnapshot', () => {
-      test('is a function.', done => {
+      test('is a function.', async () => {
         const aggregateId = uuid();
 
         const command = buildCommand('planning', 'peerGroup', aggregateId, 'join', {
@@ -1350,10 +1267,9 @@ suite('Aggregate', () => {
         });
 
         assert.that(aggregate.applySnapshot).is.ofType('function');
-        done();
       });
 
-      test('throws an error if snapshot is missing.', done => {
+      test('throws an error if snapshot is missing.', async () => {
         const aggregateId = uuid();
 
         const command = buildCommand('planning', 'peerGroup', aggregateId, 'join', {
@@ -1371,10 +1287,9 @@ suite('Aggregate', () => {
         assert.that(() => {
           aggregate.applySnapshot();
         }).is.throwing('Snapshot is missing.');
-        done();
       });
 
-      test('overwrites the revision.', done => {
+      test('overwrites the revision.', async () => {
         const aggregateId = uuid();
 
         const command = buildCommand('planning', 'peerGroup', aggregateId, 'join', {
@@ -1397,10 +1312,9 @@ suite('Aggregate', () => {
         aggregate.applySnapshot(snapshot);
 
         assert.that(aggregate.instance.revision).is.equalTo(23);
-        done();
       });
 
-      test('overwrites the state.', done => {
+      test('overwrites the state.', async () => {
         const aggregateId = uuid();
 
         const command = buildCommand('planning', 'peerGroup', aggregateId, 'join', {
@@ -1425,7 +1339,6 @@ suite('Aggregate', () => {
         assert.that(aggregate.api.forReadOnly.state).is.equalTo(snapshot.state);
         assert.that(aggregate.api.forEvents.state).is.sameAs(aggregate.api.forReadOnly.state);
         assert.that(aggregate.api.forCommands.state).is.sameAs(aggregate.api.forReadOnly.state);
-        done();
       });
     });
   });

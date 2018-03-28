@@ -14,35 +14,36 @@
     {
       "name": "Christian Nolte",
       "email": "christian.nolte@thenativeweb.io"
+    },
+    {
+      "name": "Jan-Hendrik Grundhöfer",
+      "email": "jan-hendrik.grundhoefer@thenativeweb.io"
     }
   ],
   "dependencies": {
-    "async": "2.6.0",
-    "defekt": "0.2.0",
-    "lodash": "4.17.4",
-    "processenv": "0.1.1",
-    "require-dir": "0.3.2",
-    "sparbuch": "1.0.2",
-    "stack-trace": "0.0.10",
+    "defekt": "1.0.0",
+    "lodash": "4.17.5",
+    "processenv": "1.0.0",
+    "require-dir": "1.0.0",
+    "sparbuch": "2.1.0",
     "strman": "2.0.0",
-    "tailwind": "1.0.1",
-    "wolkenkit-application": "1.0.0"
+    "tailwind": "2.0.4",
+    "wolkenkit-application": "1.0.2"
   },
   "devDependencies": {
-    "assertthat": "0.11.0",
-    "commands-events": "1.0.0",
-    "hase": "0.5.4",
-    "pg": "7.4.0",
+    "assertthat": "1.0.0",
+    "commands-events": "1.0.1",
+    "hase": "1.0.1",
+    "pg": "7.4.1",
     "pg-connection-string": "2.0.0",
-    "record-stdstreams": "0.1.0",
-    "retry": "0.10.1",
-    "roboter": "0.15.4",
-    "roboter-server": "0.15.4",
-    "runfork": "0.3.1",
-    "shelljs": "0.7.8",
-    "streamtoarray": "0.1.4",
-    "uuidv4": "0.5.0",
-    "wolkenkit-command-tools": "1.0.0"
+    "record-stdstreams": "1.0.0",
+    "roboter": "0.16.0",
+    "roboter-server": "0.16.0",
+    "runfork": "1.0.3",
+    "shelljs": "0.8.1",
+    "streamtoarray": "1.0.0",
+    "uuidv4": "1.0.0",
+    "wolkenkit-command-tools": "3.0.0"
   },
   "repository": {
     "type": "git",
