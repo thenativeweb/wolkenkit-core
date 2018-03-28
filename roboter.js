@@ -18,6 +18,8 @@ roboter.
         // Individual licenses
         'Apache-2.0', 'Apache-2.0*',
         'BSD-2-Clause', 'BSD-3-Clause',
+        'CC-BY-3.0',
+        'CC0-1.0',
         'ISC',
         'MIT', 'MIT*', 'MIT/X11',
         'MIT Licensed. http://www.opensource.org/licenses/mit-license.php',

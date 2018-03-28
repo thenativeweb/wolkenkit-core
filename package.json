@@ -25,7 +25,7 @@
     "lodash": "4.17.5",
     "processenv": "1.0.0",
     "require-dir": "1.0.0",
-    "sparbuch": "2.0.2",
+    "sparbuch": "2.1.0",
     "strman": "2.0.0",
     "tailwind": "2.0.4",
     "wolkenkit-application": "1.0.2"
@@ -43,7 +43,7 @@
     "shelljs": "0.8.1",
     "streamtoarray": "1.0.0",
     "uuidv4": "1.0.0",
-    "wolkenkit-command-tools": "thenativeweb/wolkenkit-command-tools#309bf20f7d94813775ed7863a87be62cbc2af48c"
+    "wolkenkit-command-tools": "3.0.0"
   },
   "repository": {
     "type": "git",
