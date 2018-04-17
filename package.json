@@ -25,25 +25,27 @@
     "lodash": "4.17.5",
     "processenv": "1.0.0",
     "require-dir": "1.0.0",
-    "sparbuch": "2.1.0",
     "strman": "2.0.0",
     "tailwind": "2.0.4",
-    "wolkenkit-application": "1.0.2"
+    "wolkenkit-application": "2.0.0",
+    "wolkenkit-eventstore": "2.3.0"
   },
   "devDependencies": {
     "assertthat": "1.0.0",
     "commands-events": "1.0.1",
-    "hase": "1.0.1",
+    "hase": "1.0.2",
     "pg": "7.4.1",
     "pg-connection-string": "2.0.0",
     "record-stdstreams": "1.0.0",
-    "roboter": "0.16.0",
-    "roboter-server": "0.16.0",
+    "roboter": "1.0.1",
     "runfork": "1.0.3",
     "shelljs": "0.8.1",
     "streamtoarray": "1.0.0",
     "uuidv4": "1.0.0",
     "wolkenkit-command-tools": "3.0.0"
+  },
+  "scripts": {
+    "build": "docker build -t thenativeweb/wolkenkit-core ."
   },
   "repository": {
     "type": "git",

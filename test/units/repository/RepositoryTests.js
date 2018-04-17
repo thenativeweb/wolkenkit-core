@@ -4,7 +4,7 @@ const path = require('path');
 
 const assert = require('assertthat'),
       cloneDeep = require('lodash/cloneDeep'),
-      EventStore = require('sparbuch/lib/postgres/Sparbuch'),
+      EventStore = require('wolkenkit-eventstore/dist/postgres/Eventstore'),
       runfork = require('runfork'),
       tailwind = require('tailwind'),
       toArray = require('streamtoarray'),
@@ -12,18 +12,18 @@ const assert = require('assertthat'),
       WolkenkitApplication = require('wolkenkit-application');
 
 const Aggregate = require('../../../repository/Aggregate'),
-      buildCommand = require('../../helpers/buildCommand'),
-      buildEvent = require('../../helpers/buildEvent'),
-      env = require('../../helpers/env'),
+      buildCommand = require('../../shared/buildCommand'),
+      buildEvent = require('../../shared/buildEvent'),
+      env = require('../../shared/env'),
       Repository = require('../../../repository/Repository');
 
 const { writeModel } = new WolkenkitApplication(path.join(__dirname, '..', '..', '..', 'app'));
 
 const app = tailwind.createApp({
-  keys: path.join(__dirname, '..', '..', 'keys'),
+  keys: path.join(__dirname, '..', '..', 'shared', 'keys'),
   identityProvider: {
     name: 'auth.wolkenkit.io',
-    certificate: path.join(__dirname, '..', '..', 'keys', 'certificate.pem')
+    certificate: path.join(__dirname, '..', '..', 'shared', 'keys', 'certificate.pem')
   }
 });
 
@@ -45,7 +45,7 @@ suite('Repository', () => {
     await new Promise(async (resolve, reject) => {
       try {
         await runfork({
-          path: path.join(__dirname, '..', '..', 'helpers', 'runResetPostgres.js'),
+          path: path.join(__dirname, '..', '..', 'shared', 'runResetPostgres.js'),
           env: {
             NAMESPACE: 'testdomain',
             URL: env.POSTGRES_URL_UNITS

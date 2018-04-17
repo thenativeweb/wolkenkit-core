@@ -6,7 +6,7 @@ const processEnv = require('processenv'),
       tailwind = require('tailwind'),
       WolkenkitApplication = require('wolkenkit-application');
 
-const eventStore = require(`sparbuch/${processEnv('EVENTSTORE_TYPE')}`);
+const eventStore = require(`wolkenkit-eventstore/${processEnv('EVENTSTORE_TYPE')}`);
 
 const logic = require('./appLogic'),
       publishEvents = require('./appLogic/publishEvents'),

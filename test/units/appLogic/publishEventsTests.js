@@ -3,7 +3,7 @@
 const assert = require('assertthat'),
       uuid = require('uuidv4');
 
-const buildEvent = require('../../helpers/buildEvent'),
+const buildEvent = require('../../shared/buildEvent'),
       publishEvents = require('../../../appLogic/publishEvents');
 
 suite('publishEvents', () => {

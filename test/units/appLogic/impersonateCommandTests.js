@@ -3,7 +3,7 @@
 const assert = require('assertthat'),
       uuid = require('uuidv4');
 
-const buildCommand = require('../../helpers/buildCommand'),
+const buildCommand = require('../../shared/buildCommand'),
       impersonateCommand = require('../../../appLogic/impersonateCommand');
 
 suite('impersonateCommand', () => {

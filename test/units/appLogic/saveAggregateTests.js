@@ -4,7 +4,7 @@ const assert = require('assertthat'),
       cloneDeep = require('lodash/cloneDeep'),
       uuid = require('uuidv4');
 
-const buildEvent = require('../../helpers/buildEvent'),
+const buildEvent = require('../../shared/buildEvent'),
       saveAggregate = require('../../../appLogic/saveAggregate');
 
 suite('saveAggregate', () => {

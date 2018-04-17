@@ -4,17 +4,17 @@ const { EventEmitter } = require('events'),
       path = require('path');
 
 const assert = require('assertthat'),
-      EventStore = require('sparbuch/lib/postgres/Sparbuch'),
+      EventStore = require('wolkenkit-eventstore/dist/postgres/Eventstore'),
       hase = require('hase'),
       runfork = require('runfork'),
       shell = require('shelljs'),
       toArray = require('streamtoarray'),
       uuid = require('uuidv4');
 
-const buildCommand = require('../helpers/buildCommand'),
-      env = require('../helpers/env'),
-      waitForPostgres = require('../helpers/waitForPostgres'),
-      waitForRabbitMq = require('../helpers/waitForRabbitMq');
+const buildCommand = require('../shared/buildCommand'),
+      env = require('../shared/env'),
+      waitForPostgres = require('../shared/waitForPostgres'),
+      waitForRabbitMq = require('../shared/waitForRabbitMq');
 
 suite('integrationTests', function () {
   this.timeout(15 * 1000);
@@ -85,7 +85,7 @@ suite('integrationTests', function () {
     await new Promise(async (resolve, reject) => {
       try {
         runfork({
-          path: path.join(__dirname, '..', 'helpers', 'runResetPostgres.js'),
+          path: path.join(__dirname, '..', 'shared', 'runResetPostgres.js'),
           env: {
             NAMESPACE: namespace,
             URL: env.POSTGRES_URL_INTEGRATION
