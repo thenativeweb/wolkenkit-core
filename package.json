@@ -22,13 +22,13 @@
   ],
   "dependencies": {
     "defekt": "1.0.0",
-    "lodash": "4.17.5",
+    "lodash": "4.17.10",
     "processenv": "1.0.0",
     "require-dir": "1.0.0",
     "strman": "2.0.0",
-    "tailwind": "2.0.4",
+    "tailwind": "2.1.0",
     "wolkenkit-application": "2.0.0",
-    "wolkenkit-eventstore": "2.3.0"
+    "wolkenkit-eventstore": "2.3.1"
   },
   "devDependencies": {
     "assertthat": "1.0.0",
@@ -41,6 +41,7 @@
     "runfork": "1.0.3",
     "shelljs": "0.8.1",
     "streamtoarray": "1.0.0",
+    "superagent": "3.8.3",
     "uuidv4": "1.0.0",
     "wolkenkit-command-tools": "3.0.0"
   },
