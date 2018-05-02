@@ -6,6 +6,7 @@ const { EventEmitter } = require('events'),
 const assert = require('assertthat'),
       EventStore = require('wolkenkit-eventstore/dist/postgres/Eventstore'),
       hase = require('hase'),
+      request = require('superagent'),
       runfork = require('runfork'),
       shell = require('shelljs'),
       toArray = require('streamtoarray'),
@@ -112,7 +113,9 @@ suite('integrationTests', function () {
         EVENTSTORE_TYPE: 'postgres',
         FLOWBUS_URL: env.RABBITMQ_URL_INTEGRATION,
         PROFILING_HOST: 'localhost',
-        PROFILING_PORT: 8125
+        PROFILING_PORT: 8125,
+        STATUS_PORT: 3001,
+        STATUS_CORS_ORIGIN: '*'
       },
       onExit (exitCode) {
         appLifecycle.emit('exit', exitCode);
@@ -925,6 +928,14 @@ suite('integrationTests', function () {
       ]);
 
       assert.that(event.payload.user.id).is.equalTo(originalUserId);
+    });
+  });
+
+  suite('status api', () => {
+    test('answers with api version v1.', async () => {
+      const res = await request.get('http://localhost:3001/v1/status');
+
+      assert.that(res.body).is.equalTo({ api: 'v1' });
     });
   });
 });
