@@ -27,7 +27,7 @@
     "require-dir": "1.0.0",
     "strman": "2.0.0",
     "tailwind": "2.1.0",
-    "wolkenkit-application": "2.0.0",
+    "wolkenkit-application": "2.0.1",
     "wolkenkit-eventstore": "2.3.1"
   },
   "devDependencies": {
