@@ -153,7 +153,7 @@ class Repository {
     }
 
     if (aggregate.instance.uncommittedEvents.length === 0) {
-      return;
+      return [];
     }
 
     const committedEvents = await this.eventStore.saveEvents({

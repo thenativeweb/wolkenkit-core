@@ -191,6 +191,12 @@ suite('Repository', () => {
         assert.that(committedEvents[1].metadata.position).is.ofType('number');
         assert.that(committedEvents[0].metadata.position + 1).is.equalTo(committedEvents[1].metadata.position);
       });
+
+      test('returns an empty list of committed events when there were no uncommited events.', async () => {
+        const committedEvents = await repository.saveAggregate(aggregate);
+
+        assert.that(committedEvents).is.equalTo([]);
+      });
     });
 
     suite('saveSnapshotFor', () => {
