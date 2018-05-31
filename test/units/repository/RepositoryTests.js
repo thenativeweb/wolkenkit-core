@@ -252,6 +252,37 @@ suite('Repository', () => {
         assert.that(aggregateReplayed.api.forReadOnly.state).is.equalTo(oldState);
       });
 
+      test('throws an error if the aggregate type does not match the events.', async () => {
+        const started = buildEvent('planning', 'peerGroup', aggregate.instance.id, 'started', {
+          initiator: 'Jane Doe',
+          destination: 'Riva',
+          participants: []
+        });
+        const joined = buildEvent('planning', 'peerGroup', aggregate.instance.id, 'joined', {
+          participant: 'Jane Doe'
+        });
+
+        started.metadata.revision = 1;
+        joined.metadata.revision = 2;
+
+        await eventStore.saveEvents({ events: [ started, joined ]});
+
+        command = buildCommand('planning', 'none', aggregate.instance.id, 'nonExistent', {});
+        command.addToken({ sub: uuid() });
+
+        aggregate = new Aggregate.Writable({
+          app,
+          writeModel,
+          context: { name: 'planning' },
+          aggregate: { name: 'none', id: aggregate.instance.id },
+          command
+        });
+
+        await assert.that(async () => {
+          await repository.replayAggregate(aggregate);
+        }).is.throwingAsync('Aggregate not found.');
+      });
+
       test('applies previously saved events.', async () => {
         const started = buildEvent('planning', 'peerGroup', aggregate.instance.id, 'started', {
           initiator: 'Jane Doe',
