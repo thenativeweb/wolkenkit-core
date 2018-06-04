@@ -60,6 +60,10 @@ class Repository {
       };
 
       onData = event => {
+        if (!aggregate.definition.events[event.name]) {
+          return reject(new Error('Aggregate not found.'));
+        }
+
         try {
           aggregate.definition.events[event.name](aggregate.api.forEvents, event);
         } catch (ex) {
