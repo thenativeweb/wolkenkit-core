@@ -23,18 +23,18 @@
   "dependencies": {
     "defekt": "1.0.0",
     "lodash": "4.17.10",
-    "processenv": "1.0.0",
+    "processenv": "1.0.1",
     "require-dir": "1.0.0",
-    "strman": "2.0.0",
-    "tailwind": "2.1.0",
-    "wolkenkit-application": "2.0.1",
-    "wolkenkit-eventstore": "2.3.1"
+    "strman": "2.0.1",
+    "tailwind": "2.1.1",
+    "wolkenkit-application": "2.0.2",
+    "wolkenkit-eventstore": "2.4.1"
   },
   "devDependencies": {
     "assertthat": "1.0.0",
-    "commands-events": "1.0.1",
-    "hase": "1.0.2",
-    "pg": "7.4.1",
+    "commands-events": "1.0.3",
+    "hase": "1.0.3",
+    "pg": "7.4.3",
     "pg-connection-string": "2.0.0",
     "record-stdstreams": "1.0.0",
     "roboter": "1.0.4",
@@ -42,7 +42,7 @@
     "shelljs": "0.8.2",
     "streamtoarray": "1.0.0",
     "superagent": "3.8.3",
-    "uuidv4": "1.0.0",
+    "uuidv4": "1.0.1",
     "wolkenkit-command-tools": "3.0.0"
   },
   "scripts": {
