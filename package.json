@@ -38,7 +38,7 @@
     "pg": "7.4.3",
     "pg-connection-string": "2.0.0",
     "record-stdstreams": "1.0.0",
-    "roboter": "1.0.4",
+    "roboter": "1.0.5",
     "runfork": "1.0.3",
     "shelljs": "0.8.2",
     "streamtoarray": "1.0.0",
