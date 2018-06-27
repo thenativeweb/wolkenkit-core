@@ -22,6 +22,7 @@
   ],
   "dependencies": {
     "defekt": "1.0.0",
+    "flaschenpost": "1.1.1",
     "lodash": "4.17.10",
     "processenv": "1.0.2",
     "require-dir": "1.0.0",
