@@ -29,7 +29,7 @@
     "strman": "2.0.1",
     "tailwind": "2.2.0",
     "wolkenkit-application": "2.0.2",
-    "wolkenkit-eventstore": "2.4.1"
+    "wolkenkit-eventstore": "2.5.0"
   },
   "devDependencies": {
     "assertthat": "1.0.0",
