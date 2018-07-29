@@ -2,17 +2,23 @@
 
 const path = require('path');
 
-const assert = require('assertthat'),
+const applicationManager = require('wolkenkit-application'),
+      assert = require('assertthat'),
       tailwind = require('tailwind'),
-      uuid = require('uuidv4'),
-      WolkenkitApplication = require('wolkenkit-application');
+      uuid = require('uuidv4');
 
 const Aggregate = require('../../../repository/Aggregate'),
       buildCommand = require('../../shared/buildCommand');
 
-const { writeModel } = new WolkenkitApplication(path.join(__dirname, '..', '..', '..', 'app'));
-
 suite('Aggregate', () => {
+  let writeModel;
+
+  suiteSetup(async () => {
+    writeModel = (await applicationManager.load({
+      directory: path.join(__dirname, '..', '..', '..', 'app')
+    })).writeModel;
+  });
+
   suite('Readable', () => {
     test('is a function.', async () => {
       assert.that(Aggregate.Readable).is.ofType('function');

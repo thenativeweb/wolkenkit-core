@@ -2,16 +2,14 @@
 
 const path = require('path');
 
-const assert = require('assertthat'),
+const applicationManager = require('wolkenkit-application'),
+      assert = require('assertthat'),
       tailwind = require('tailwind'),
-      uuid = require('uuidv4'),
-      WolkenkitApplication = require('wolkenkit-application');
+      uuid = require('uuidv4');
 
 const Aggregate = require('../../../../repository/Aggregate'),
       buildCommand = require('../../../shared/buildCommand'),
       isAccessGrantedToCommand = require('../../../../appLogic/preProcess/isAccessGrantedToCommand');
-
-const { writeModel } = new WolkenkitApplication(path.join(__dirname, '..', '..', '..', '..', 'app'));
 
 const app = tailwind.createApp({
   keys: path.join(__dirname, '..', '..', '..', 'shared', 'keys'),
@@ -23,7 +21,14 @@ const app = tailwind.createApp({
 
 suite('isAccessGrantedToCommand', () => {
   let aggregateId,
-      token;
+      token,
+      writeModel;
+
+  suiteSetup(async () => {
+    writeModel = (await applicationManager.load({
+      directory: path.join(__dirname, '..', '..', '..', '..', 'app')
+    })).writeModel;
+  });
 
   setup(() => {
     aggregateId = uuid();

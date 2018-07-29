@@ -2,21 +2,19 @@
 
 const path = require('path');
 
-const assert = require('assertthat'),
+const applicationManager = require('wolkenkit-application'),
+      assert = require('assertthat'),
       EventStore = require('wolkenkit-eventstore/dist/postgres/Eventstore'),
       record = require('record-stdstreams'),
       runfork = require('runfork'),
       tailwind = require('tailwind'),
-      uuid = require('uuidv4'),
-      WolkenkitApplication = require('wolkenkit-application');
+      uuid = require('uuidv4');
 
 const Aggregate = require('../../../repository/Aggregate'),
       buildCommand = require('../../shared/buildCommand'),
       CommandHandler = require('../../../CommandHandler'),
       env = require('../../shared/env'),
       Repository = require('../../../repository/Repository');
-
-const { writeModel } = new WolkenkitApplication(path.join(__dirname, '..', '..', '..', 'app'));
 
 const app = tailwind.createApp({
   keys: path.join(__dirname, '..', '..', 'shared', 'keys'),
@@ -30,7 +28,13 @@ suite('CommandHandler', () => {
   const eventStore = new EventStore(),
         repository = new Repository();
 
+  let writeModel;
+
   suiteSetup(async () => {
+    writeModel = (await applicationManager.load({
+      directory: path.join(__dirname, '..', '..', '..', 'app')
+    })).writeModel;
+
     await eventStore.initialize({
       url: env.POSTGRES_URL_UNITS,
       namespace: 'testdomain'

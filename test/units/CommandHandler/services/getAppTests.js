@@ -2,18 +2,25 @@
 
 const path = require('path');
 
-const assert = require('assertthat'),
-      uuid = require('uuidv4'),
-      WolkenkitApplication = require('wolkenkit-application');
+const applicationManager = require('wolkenkit-application'),
+      assert = require('assertthat'),
+      uuid = require('uuidv4');
 
 const Repository = require('../../../../repository/Repository');
 
 const getApp = require('../../../../CommandHandler/services/getApp');
 
 const repository = new Repository();
-const { writeModel } = new WolkenkitApplication(path.join(__dirname, '..', '..', '..', '..', 'app'));
 
 suite('getApp', () => {
+  let writeModel;
+
+  suiteSetup(async () => {
+    writeModel = (await applicationManager.load({
+      directory: path.join(__dirname, '..', '..', '..', '..', 'app')
+    })).writeModel;
+  });
+
   test('is a function.', async () => {
     assert.that(getApp).is.ofType('function');
   });

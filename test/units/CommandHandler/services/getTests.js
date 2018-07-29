@@ -2,9 +2,9 @@
 
 const path = require('path');
 
-const assert = require('assertthat'),
-      tailwind = require('tailwind'),
-      WolkenkitApplication = require('wolkenkit-application');
+const applicationManager = require('wolkenkit-application'),
+      assert = require('assertthat'),
+      tailwind = require('tailwind');
 
 const buildCommand = require('../../../shared/buildCommand'),
       getServices = require('../../../../CommandHandler/services/get'),
@@ -20,9 +20,16 @@ const app = tailwind.createApp({
 
 const command = buildCommand('planning', 'peerGroup', 'join', {});
 const repository = new Repository();
-const { writeModel } = new WolkenkitApplication(path.join(__dirname, '..', '..', '..', '..', 'app'));
 
 suite('getServices', () => {
+  let writeModel;
+
+  suiteSetup(async () => {
+    writeModel = (await applicationManager.load({
+      directory: path.join(__dirname, '..', '..', '..', '..', 'app')
+    })).writeModel;
+  });
+
   test('is a function.', async () => {
     assert.that(getServices).is.ofType('function');
   });

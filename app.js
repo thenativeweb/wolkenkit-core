@@ -2,10 +2,10 @@
 
 const path = require('path');
 
-const flaschenpost = require('flaschenpost'),
+const applicationManager = require('wolkenkit-application'),
+      flaschenpost = require('flaschenpost'),
       processEnv = require('processenv'),
-      tailwind = require('tailwind'),
-      WolkenkitApplication = require('wolkenkit-application');
+      tailwind = require('tailwind');
 
 const eventStore = require(`wolkenkit-eventstore/${processEnv('EVENTSTORE_TYPE')}`);
 
@@ -25,7 +25,7 @@ const loggerSystem = flaschenpost.getLogger();
     });
 
     const applicationDirectory = path.join(app.dirname, 'app');
-    const { writeModel } = new WolkenkitApplication(applicationDirectory);
+    const { writeModel } = await applicationManager.load({ directory: applicationDirectory });
 
     await eventStore.initialize({
       url: app.env('EVENTSTORE_URL'),
