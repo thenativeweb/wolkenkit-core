@@ -93,7 +93,7 @@ const loggerSystem = flaschenpost.getLogger();
     await app.commandbus.use(new app.wires.commandbus.amqp.Receiver({
       url: processenv('COMMANDBUS_URL'),
       application: processenv('APPLICATION'),
-      prefetch: processenv('COMMANDBUS_CONCURRENCY') || 256
+      prefetch: processenv('COMMANDBUS_CONCURRENCY')
     }));
 
     await app.status.use(new app.wires.status.http.Server({

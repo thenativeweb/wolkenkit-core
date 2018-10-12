@@ -1,6 +1,7 @@
 'use strict';
 
 const Course = require('marble-run'),
+      processenv = require('processenv'),
       requireDir = require('require-dir');
 
 const CommandHandler = require('../CommandHandler'),
@@ -10,7 +11,9 @@ const CommandHandler = require('../CommandHandler'),
 
 const workflow = requireDir();
 const steps = { preProcess, postProcess };
-const course = new Course();
+const course = new Course({
+  trackCount: processenv('COMMANDBUS_CONCURRENCY')
+});
 
 const appLogic = function ({ app, writeModel, eventStore }) {
   if (!app) {

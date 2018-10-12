@@ -110,6 +110,7 @@ suite('integrationTests', function () {
       env: {
         APPLICATION: application,
         COMMANDBUS_URL: env.RABBITMQ_URL_INTEGRATION,
+        COMMANDBUS_CONCURRENCY: 256,
         EVENTBUS_URL: env.RABBITMQ_URL_INTEGRATION,
         EVENTSTORE_URL: env.POSTGRES_URL_INTEGRATION,
         EVENTSTORE_TYPE: 'postgres',
