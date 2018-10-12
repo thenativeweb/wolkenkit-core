@@ -4,10 +4,10 @@ const path = require('path');
 
 const applicationManager = require('wolkenkit-application'),
       flaschenpost = require('flaschenpost'),
-      processEnv = require('processenv'),
+      processenv = require('processenv'),
       tailwind = require('tailwind');
 
-const eventStore = require(`wolkenkit-eventstore/${processEnv('EVENTSTORE_TYPE')}`);
+const eventStore = require(`wolkenkit-eventstore/${processenv('EVENTSTORE_TYPE')}`);
 
 const logic = require('./appLogic'),
       publishEvents = require('./appLogic/publishEvents'),
@@ -19,8 +19,8 @@ const loggerSystem = flaschenpost.getLogger();
   try {
     const app = tailwind.createApp({
       profiling: {
-        host: processEnv('PROFILING_HOST'),
-        port: processEnv('PROFILING_PORT')
+        host: processenv('PROFILING_HOST'),
+        port: processenv('PROFILING_PORT')
       }
     });
 
@@ -28,20 +28,20 @@ const loggerSystem = flaschenpost.getLogger();
     const { writeModel } = await applicationManager.load({ directory: applicationDirectory });
 
     await eventStore.initialize({
-      url: app.env('EVENTSTORE_URL'),
-      namespace: `${app.env('APPLICATION')}domain`
+      url: processenv('EVENTSTORE_URL'),
+      namespace: `${processenv('APPLICATION')}domain`
     });
 
     repository.initialize({ app, writeModel, eventStore });
 
     await app.eventbus.use(new app.wires.eventbus.amqp.Sender({
-      url: app.env('EVENTBUS_URL'),
-      application: app.env('APPLICATION')
+      url: processenv('EVENTBUS_URL'),
+      application: processenv('APPLICATION')
     }));
 
     await app.flowbus.use(new app.wires.flowbus.amqp.Sender({
-      url: app.env('FLOWBUS_URL'),
-      application: app.env('APPLICATION')
+      url: processenv('FLOWBUS_URL'),
+      application: processenv('APPLICATION')
     }));
 
     const eventStream = await eventStore.getUnpublishedEventStream();
@@ -91,16 +91,22 @@ const loggerSystem = flaschenpost.getLogger();
     });
 
     await app.commandbus.use(new app.wires.commandbus.amqp.Receiver({
-      url: app.env('COMMANDBUS_URL'),
-      application: app.env('APPLICATION')
+      url: processenv('COMMANDBUS_URL'),
+      application: processenv('APPLICATION'),
+      prefetch: processenv('COMMANDBUS_CONCURRENCY')
     }));
 
     await app.status.use(new app.wires.status.http.Server({
-      port: app.env('STATUS_PORT'),
-      corsOrigin: app.env('STATUS_CORS_ORIGIN')
+      port: processenv('STATUS_PORT'),
+      corsOrigin: processenv('STATUS_CORS_ORIGIN')
     }));
 
-    logic({ app, writeModel, eventStore });
+    logic({
+      app,
+      writeModel,
+      eventStore,
+      commandBusConcurrency: processenv('COMMANDBUS_CONCURRENCY')
+    });
   } catch (ex) {
     loggerSystem.fatal('An unexpected error occured.', { err: ex });
 

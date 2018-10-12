@@ -71,7 +71,9 @@ suite('integrationTests', function () {
 
     appLifecycle = new EventEmitter();
 
-    mq = await hase.connect(env.RABBITMQ_URL_INTEGRATION);
+    mq = await hase.connect({
+      url: env.RABBITMQ_URL_INTEGRATION
+    });
 
     eventStore = new EventStore();
     await eventStore.initialize({
@@ -108,6 +110,7 @@ suite('integrationTests', function () {
       env: {
         APPLICATION: application,
         COMMANDBUS_URL: env.RABBITMQ_URL_INTEGRATION,
+        COMMANDBUS_CONCURRENCY: 256,
         EVENTBUS_URL: env.RABBITMQ_URL_INTEGRATION,
         EVENTSTORE_URL: env.POSTGRES_URL_INTEGRATION,
         EVENTSTORE_TYPE: 'postgres',
@@ -437,12 +440,20 @@ suite('integrationTests', function () {
       sub: uuid()
     });
 
+    await Promise.all([
+      waitForEvent(evt =>
+        evt.name === 'started'),
+      new Promise(resolve => {
+        commandbus.write(start);
+        resolve();
+      })
+    ]);
+
     const [ event ] = await Promise.all([
       waitForEvent(evt =>
         evt.name === 'loadedOtherAggregate' &&
         evt.aggregate.id === loadOtherAggregate.aggregate.id),
       new Promise(resolve => {
-        commandbus.write(start);
         commandbus.write(loadOtherAggregate);
         resolve();
       })
@@ -450,6 +461,97 @@ suite('integrationTests', function () {
 
     assert.that(event.payload.data.initiator).is.equalTo('Jane Doe');
     assert.that(event.payload.data.destination).is.equalTo('Riva');
+  });
+
+  test('runs commands for different aggregate instances in parrallel.', async () => {
+    const eventOrder = [];
+
+    const blockingCommand = buildCommand('planning', 'peerGroup', uuid(), 'triggerLongRunningCommand', {
+      duration: 1000
+    });
+
+    blockingCommand.addToken({
+      sub: uuid()
+    });
+
+    const immediateCommand = buildCommand('planning', 'peerGroup', uuid(), 'triggerImmediateCommand', {
+      initiator: 'John Doe',
+      destination: 'Somewhere over the rainbow'
+    });
+
+    immediateCommand.addToken({
+      sub: uuid()
+    });
+
+    await Promise.all([
+      waitForEvent(evt => {
+        if (evt.name !== 'transferredOwnership') {
+          eventOrder.push(evt.name);
+        }
+
+        if (evt.name === 'finishedLongRunningCommand') {
+          return true;
+        }
+
+        return false;
+      }),
+      new Promise(resolve => {
+        commandbus.write(blockingCommand);
+        commandbus.write(immediateCommand);
+        resolve();
+      })
+    ]);
+
+    assert.that(eventOrder).is.equalTo([
+      'finishedImmediateCommand',
+      'finishedImmediateCommand',
+      'finishedLongRunningCommand',
+      'finishedLongRunningCommand'
+    ]);
+  });
+
+  test('runs commands for one aggregate instances in series.', async () => {
+    const eventOrder = [];
+
+    const longRunningCommand = buildCommand('planning', 'peerGroup', uuid(), 'triggerLongRunningCommand', {
+      duration: 1000
+    });
+
+    longRunningCommand.addToken({
+      sub: uuid()
+    });
+
+    const immediateCommand = buildCommand('planning', 'peerGroup', longRunningCommand.aggregate.id, 'triggerImmediateCommand', {});
+
+    immediateCommand.addToken({
+      sub: uuid()
+    });
+
+    await Promise.all([
+      waitForEvent(evt => {
+        if (evt.name !== 'transferredOwnership') {
+          eventOrder.push(evt.name);
+        }
+
+        if (evt.name === 'finishedImmediateCommand') {
+          return true;
+        }
+
+        return false;
+      }),
+      new Promise(resolve => {
+        commandbus.write(longRunningCommand);
+        commandbus.write(immediateCommand);
+        resolve();
+      })
+    ]);
+
+    assert.that(eventOrder).is.equalTo([
+      'finishedLongRunningCommand',
+      'finishedLongRunningCommand',
+      'finishedImmediateCommand',
+      'finishedImmediateCommand'
+    ]);
   });
 
   suite('authorization', () => {
