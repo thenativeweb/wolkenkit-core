@@ -1,7 +1,6 @@
 'use strict';
 
 const Course = require('marble-run'),
-      processenv = require('processenv'),
       requireDir = require('require-dir');
 
 const CommandHandler = require('../CommandHandler'),
@@ -11,11 +10,8 @@ const CommandHandler = require('../CommandHandler'),
 
 const workflow = requireDir();
 const steps = { preProcess, postProcess };
-const course = new Course({
-  trackCount: processenv('COMMANDBUS_CONCURRENCY')
-});
 
-const appLogic = function ({ app, writeModel, eventStore }) {
+const appLogic = function ({ app, writeModel, eventStore, commandBusConcurrency }) {
   if (!app) {
     throw new Error('App is missing.');
   }
@@ -25,8 +21,15 @@ const appLogic = function ({ app, writeModel, eventStore }) {
   if (!eventStore) {
     throw new Error('Event store is missing.');
   }
+  if (!commandBusConcurrency) {
+    throw new Error('Command bus concurrency is missing.');
+  }
 
   const logger = app.services.getLogger();
+
+  const course = new Course({
+    trackCount: commandBusConcurrency
+  });
 
   const commandHandler = new CommandHandler({ app, writeModel, repository });
 

@@ -101,7 +101,12 @@ const loggerSystem = flaschenpost.getLogger();
       corsOrigin: processenv('STATUS_CORS_ORIGIN')
     }));
 
-    logic({ app, writeModel, eventStore });
+    logic({
+      app,
+      writeModel,
+      eventStore,
+      commandBusConcurrency: processenv('COMMANDBUS_CONCURRENCY')
+    });
   } catch (ex) {
     loggerSystem.fatal('An unexpected error occured.', { err: ex });
 
