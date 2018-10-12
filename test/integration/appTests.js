@@ -463,6 +463,97 @@ suite('integrationTests', function () {
     assert.that(event.payload.data.destination).is.equalTo('Riva');
   });
 
+  test('runs commands for different aggregate instances in parrallel.', async () => {
+    const eventOrder = [];
+
+    const blockingCommand = buildCommand('planning', 'peerGroup', uuid(), 'triggerLongRunningCommand', {
+      duration: 1000
+    });
+
+    blockingCommand.addToken({
+      sub: uuid()
+    });
+
+    const immediateCommand = buildCommand('planning', 'peerGroup', uuid(), 'triggerImmediateCommand', {
+      initiator: 'John Doe',
+      destination: 'Somewhere over the rainbow'
+    });
+
+    immediateCommand.addToken({
+      sub: uuid()
+    });
+
+    await Promise.all([
+      waitForEvent(evt => {
+        if (evt.name !== 'transferredOwnership') {
+          eventOrder.push(evt.name);
+        }
+
+        if (evt.name === 'finishedLongRunningCommand') {
+          return true;
+        }
+
+        return false;
+      }),
+      new Promise(resolve => {
+        commandbus.write(blockingCommand);
+        commandbus.write(immediateCommand);
+        resolve();
+      })
+    ]);
+
+    assert.that(eventOrder).is.equalTo([
+      'finishedImmediateCommand',
+      'finishedImmediateCommand',
+      'finishedLongRunningCommand',
+      'finishedLongRunningCommand'
+    ]);
+  });
+
+  test('runs commands for one aggregate instances in series.', async () => {
+    const eventOrder = [];
+
+    const longRunningCommand = buildCommand('planning', 'peerGroup', uuid(), 'triggerLongRunningCommand', {
+      duration: 1000
+    });
+
+    longRunningCommand.addToken({
+      sub: uuid()
+    });
+
+    const immediateCommand = buildCommand('planning', 'peerGroup', longRunningCommand.aggregate.id, 'triggerImmediateCommand', {});
+
+    immediateCommand.addToken({
+      sub: uuid()
+    });
+
+    await Promise.all([
+      waitForEvent(evt => {
+        if (evt.name !== 'transferredOwnership') {
+          eventOrder.push(evt.name);
+        }
+
+        if (evt.name === 'finishedImmediateCommand') {
+          return true;
+        }
+
+        return false;
+      }),
+      new Promise(resolve => {
+        commandbus.write(longRunningCommand);
+        commandbus.write(immediateCommand);
+        resolve();
+      })
+    ]);
+
+    assert.that(eventOrder).is.equalTo([
+      'finishedLongRunningCommand',
+      'finishedLongRunningCommand',
+      'finishedImmediateCommand',
+      'finishedImmediateCommand'
+    ]);
+  });
+
   suite('authorization', () => {
     suite('when access is limited to owner', () => {
       test('accepts commands from the owner.', async () => {

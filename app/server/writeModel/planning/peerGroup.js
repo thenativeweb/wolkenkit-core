@@ -26,7 +26,9 @@ const initialState = {
       requestServices: { forAuthenticated: true, forPublic: false },
       requestNonExistentService: { forAuthenticated: true, forPublic: false },
       useLoggerService: { forAuthenticated: true, forPublic: false },
-      loadOtherAggregate: { forAuthenticated: true, forPublic: false }
+      loadOtherAggregate: { forAuthenticated: true, forPublic: false },
+      triggerImmediateCommand: { forAuthenticated: true, forPublic: false },
+      triggerLongRunningCommand: { forAuthenticated: true, forPublic: false }
     },
     events: {
       started: { forPublic: true },
@@ -34,7 +36,9 @@ const initialState = {
       loadedOtherAggregate: { forAuthenticated: true, forPublic: false },
       joinedOnlyForOwner: { forAuthenticated: false, forPublic: false },
       joinedOnlyForAuthenticated: { forAuthenticated: true, forPublic: false },
-      joinedForPublic: { forAuthenticated: true, forPublic: true }
+      joinedForPublic: { forAuthenticated: true, forPublic: true },
+      finishedImmediateCommand: { forAuthenticated: true, forPublic: true },
+      finishedLongRunningCommand: { forAuthenticated: true, forPublic: true }
     }
   }
 };
@@ -134,6 +138,18 @@ const commands = {
     }
 
     peerGroup.events.publish('loadedOtherAggregate', otherPeerGroup.state);
+  },
+
+  triggerImmediateCommand (peerGroup) {
+    peerGroup.events.publish('finishedImmediateCommand');
+  },
+
+  async triggerLongRunningCommand (peerGroup, command) {
+    await new Promise(resolve => {
+      setTimeout(resolve, command.data.duration);
+    });
+
+    peerGroup.events.publish('finishedLongRunningCommand');
   }
 };
 
@@ -155,7 +171,11 @@ const events = {
 
   joinedOnlyForAuthenticated () {},
 
-  joinedForPublic () {}
+  joinedForPublic () {},
+
+  finishedImmediateCommand () {},
+
+  finishedLongRunningCommand () {}
 };
 
 module.exports = { initialState, commands, events };
