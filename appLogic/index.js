@@ -1,6 +1,7 @@
 'use strict';
 
-const requireDir = require('require-dir');
+const Course = require('marble-run'),
+      requireDir = require('require-dir');
 
 const CommandHandler = require('../CommandHandler'),
       postProcess = require('./postProcess'),
@@ -9,6 +10,7 @@ const CommandHandler = require('../CommandHandler'),
 
 const workflow = requireDir();
 const steps = { preProcess, postProcess };
+const course = new Course();
 
 const appLogic = function ({ app, writeModel, eventStore }) {
   if (!app) {
@@ -46,16 +48,22 @@ const appLogic = function ({ app, writeModel, eventStore }) {
         committedEvents;
 
     try {
-      await workflow.validateCommand({ command, writeModel });
-      await workflow.impersonateCommand({ command });
+      await course.add({
+        id: command.id,
+        routingKey: command.aggregate.id,
+        async task () {
+          await workflow.validateCommand({ command, writeModel });
+          await workflow.impersonateCommand({ command });
 
-      aggregate = await workflow.loadAggregate({ command, repository });
+          aggregate = await workflow.loadAggregate({ command, repository });
 
-      await workflow.process({ command, steps: steps.preProcess, aggregate });
-      await workflow.handleCommand({ command, commandHandler, aggregate });
-      await workflow.process({ command, steps: steps.postProcess, aggregate });
+          await workflow.process({ command, steps: steps.preProcess, aggregate });
+          await workflow.handleCommand({ command, commandHandler, aggregate });
+          await workflow.process({ command, steps: steps.postProcess, aggregate });
 
-      committedEvents = await workflow.saveAggregate({ aggregate, repository });
+          committedEvents = await workflow.saveAggregate({ aggregate, repository });
+        }
+      });
     } catch (ex) {
       logger.error('Failed to handle command.', { command, ex });
 

@@ -71,7 +71,9 @@ suite('integrationTests', function () {
 
     appLifecycle = new EventEmitter();
 
-    mq = await hase.connect(env.RABBITMQ_URL_INTEGRATION);
+    mq = await hase.connect({
+      url: env.RABBITMQ_URL_INTEGRATION
+    });
 
     eventStore = new EventStore();
     await eventStore.initialize({
@@ -437,12 +439,20 @@ suite('integrationTests', function () {
       sub: uuid()
     });
 
+    await Promise.all([
+      waitForEvent(evt =>
+        evt.name === 'started'),
+      new Promise(resolve => {
+        commandbus.write(start);
+        resolve();
+      })
+    ]);
+
     const [ event ] = await Promise.all([
       waitForEvent(evt =>
         evt.name === 'loadedOtherAggregate' &&
         evt.aggregate.id === loadOtherAggregate.aggregate.id),
       new Promise(resolve => {
-        commandbus.write(start);
         commandbus.write(loadOtherAggregate);
         resolve();
       })
