@@ -214,6 +214,18 @@ suite('Aggregate', () => {
 
     suite('api', () => {
       suite('forReadOnly', () => {
+        test('contains the aggregate id.', async () => {
+          const id = uuid();
+
+          const aggregate = new Aggregate.Readable({
+            writeModel,
+            context: { name: 'planning' },
+            aggregate: { name: 'peerGroup', id }
+          });
+
+          assert.that(aggregate.api.forReadOnly.id).is.equalTo(id);
+        });
+
         suite('state', () => {
           test('contains the initial state.', async () => {
             const aggregate = new Aggregate.Readable({
@@ -252,6 +264,18 @@ suite('Aggregate', () => {
       });
 
       suite('forEvents', () => {
+        test('contains the aggregate id.', async () => {
+          const id = uuid();
+
+          const aggregate = new Aggregate.Readable({
+            writeModel,
+            context: { name: 'planning' },
+            aggregate: { name: 'peerGroup', id }
+          });
+
+          assert.that(aggregate.api.forEvents.id).is.equalTo(id);
+        });
+
         suite('state', () => {
           test('references the read-only api state.', async () => {
             const aggregate = new Aggregate.Readable({
@@ -485,7 +509,9 @@ suite('Aggregate', () => {
       assert.that(aggregate.instance.revision).is.equalTo(0);
       assert.that(aggregate.instance.uncommittedEvents).is.equalTo([]);
 
+      assert.that(aggregate.api.forReadOnly.id).is.equalTo(aggregateId);
       assert.that(aggregate.api.forReadOnly.state).is.equalTo(writeModel.planning.peerGroup.initialState);
+      assert.that(aggregate.api.forEvents.id).is.sameAs(aggregate.api.forReadOnly.id);
       assert.that(aggregate.api.forEvents.state).is.sameAs(aggregate.api.forReadOnly.state);
       assert.that(aggregate.api.forEvents.setState).is.ofType('function');
 
@@ -494,6 +520,24 @@ suite('Aggregate', () => {
 
     suite('api', () => {
       suite('forCommands', () => {
+        test('contains the aggregate id.', async () => {
+          const aggregateId = uuid();
+
+          const command = buildCommand('planning', 'peerGroup', aggregateId, 'join', {
+            participant: 'Jane Doe'
+          });
+
+          const aggregate = new Aggregate.Writable({
+            app,
+            writeModel,
+            context: { name: 'planning' },
+            aggregate: { name: 'peerGroup', id: aggregateId },
+            command
+          });
+
+          assert.that(aggregate.api.forCommands.id).is.equalTo(aggregateId);
+        });
+
         suite('state', () => {
           test('references the read-only api state.', async () => {
             const aggregateId = uuid();

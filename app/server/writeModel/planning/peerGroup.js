@@ -13,6 +13,7 @@ const initialState = {
   isAuthorized: {
     commands: {
       start: { forPublic: true },
+      validateAggregateApi: { forPublic: true },
       startForOwner: { forAuthenticated: false, forPublic: false },
       startForAuthenticated: { forAuthenticated: true, forPublic: false },
       join: { forPublic: true },
@@ -32,6 +33,7 @@ const initialState = {
     },
     events: {
       started: { forPublic: true },
+      validatedAggregateApi: { forPublic: true },
       joined: { forPublic: true },
       loadedOtherAggregate: { forAuthenticated: true, forPublic: false },
       joinedOnlyForOwner: { forAuthenticated: false, forPublic: false },
@@ -55,6 +57,28 @@ const commands = {
       peerGroup.events.publish('joined', {
         participant: command.data.initiator
       });
+    }
+  ],
+
+  validateAggregateApi: [
+    only.ifExists(),
+    peerGroup => {
+      if (!peerGroup.id) {
+        throw new Error('Id is missing.');
+      }
+      if (!peerGroup.state) {
+        throw new Error('State is missing.');
+      }
+      if (!peerGroup.events) {
+        throw new Error('Events are missing.');
+      }
+      if (!peerGroup.events.publish) {
+        throw new Error('Events publish is missing.');
+      }
+
+      const { id } = peerGroup;
+
+      peerGroup.events.publish('validatedAggregateApi', { id });
     }
   ],
 
@@ -159,6 +183,15 @@ const events = {
       initiator: event.data.initiator,
       destination: event.data.destination
     });
+  },
+
+  validatedAggregateApi (peerGroup, event) {
+    if (!peerGroup.id) {
+      throw new Error('Id is missing.');
+    }
+    if (peerGroup.id !== event.data.id) {
+      throw new Error('Aggregate ids are not consistent.');
+    }
   },
 
   joined (peerGroup, event) {
