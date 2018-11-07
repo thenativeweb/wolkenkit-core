@@ -33,14 +33,14 @@
     "wolkenkit-eventstore": "2.5.0"
   },
   "devDependencies": {
-    "assertthat": "1.0.0",
+    "assertthat": "2.0.0",
     "commands-events": "1.0.3",
     "common-tags": "1.8.0",
     "hase": "2.0.0",
     "pg": "7.4.3",
     "pg-connection-string": "2.0.0",
     "record-stdstreams": "1.0.0",
-    "roboter": "2.0.0",
+    "roboter": "2.1.0",
     "runfork": "1.0.3",
     "shelljs": "0.8.2",
     "streamtoarray": "1.0.0",

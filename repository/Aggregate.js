@@ -86,10 +86,12 @@ class Readable {
 
     this.api = {};
     this.api.forReadOnly = {};
+    this.api.forReadOnly.id = aggregate.id;
     this.api.forReadOnly.state = cloneDeep(this.definition.initialState);
     this.api.forReadOnly.exists = this.instance.exists;
 
     this.api.forEvents = {};
+    this.api.forEvents.id = this.api.forReadOnly.id;
     this.api.forEvents.state = this.api.forReadOnly.state;
     this.api.forEvents.setState = newState => {
       merge(this.api.forEvents.state, newState);
@@ -137,6 +139,7 @@ class Writable extends Readable {
     super({ writeModel, context, aggregate });
 
     this.api.forCommands = {};
+    this.api.forCommands.id = aggregate.id;
     this.api.forCommands.state = this.api.forReadOnly.state;
     this.api.forCommands.exists = this.api.forReadOnly.exists;
 

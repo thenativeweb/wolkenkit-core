@@ -141,7 +141,9 @@ suite('integrationTests', function () {
     await stopApp();
   });
 
-  test('exits when the connection to the command bus / event bus / flow bus is lost.', async () => {
+  test('exits when the connection to the command bus / event bus / flow bus is lost.', async function () {
+    this.timeout(25 * 1000);
+
     await new Promise((resolve, reject) => {
       try {
         appLifecycle.once('exit', async () => {
@@ -420,6 +422,47 @@ suite('integrationTests', function () {
     assert.that(event.payload.aggregate.id).is.equalTo(command.aggregate.id);
     assert.that(event.payload.name).is.equalTo('joinFailed');
     assert.that(event.payload.data.reason).is.equalTo('Invalid aggregate name.');
+  });
+
+  test('provides the aggregate api.', async () => {
+    const aggregateId = uuid();
+    const sub = uuid();
+
+    const commandStart = buildCommand('planning', 'peerGroup', aggregateId, 'start', {
+      initiator: 'John Doe',
+      destination: 'Somewhere over the rainbow'
+    });
+
+    commandStart.addToken({
+      sub
+    });
+
+    const commandValidateAggregateApi = buildCommand('planning', 'peerGroup', aggregateId, 'validateAggregateApi', {});
+
+    commandValidateAggregateApi.addToken({
+      sub
+    });
+
+    const [[ eventValidatedAggregateApi ]] = await Promise.all([
+      new Promise(async resolve => {
+        await waitForEvent(evt =>
+          evt.name === 'joined' &&
+          evt.aggregate.id === commandStart.aggregate.id);
+
+        const evtValidatedAggregateApi = await waitForEvent(evt =>
+          evt.name === 'validatedAggregateApi' &&
+          evt.aggregate.id === commandValidateAggregateApi.aggregate.id);
+
+        resolve([ evtValidatedAggregateApi ]);
+      }),
+      new Promise(resolve => {
+        commandbus.write(commandStart);
+        commandbus.write(commandValidateAggregateApi);
+        resolve();
+      })
+    ]);
+
+    assert.that(eventValidatedAggregateApi.payload.data.id).is.equalTo(aggregateId);
   });
 
   test('enables commands to load other aggregates.', async () => {
