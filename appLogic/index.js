@@ -89,7 +89,12 @@ const appLogic = function ({ app, writeModel, eventStore, commandBusConcurrency 
         },
         metadata: {
           correlationId: command.metadata.correlationId,
-          causationId: command.id
+          causationId: command.id,
+          isAuthorized: {
+            owner: command.user.id,
+            forAuthenticated: false,
+            forPublic: false
+          }
         }
       });
 

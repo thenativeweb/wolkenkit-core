@@ -241,6 +241,11 @@ suite('integrationTests', function () {
     assert.that(event.payload.name).is.equalTo('joinRejected');
     assert.that(event.payload.data.reason).is.equalTo('Peer group does not exist.');
     assert.that(event.payload.metadata.correlationId).is.equalTo(command.metadata.correlationId);
+    assert.that(event.payload.metadata.isAuthorized).is.equalTo({
+      owner: command.user.id,
+      forAuthenticated: false,
+      forPublic: false
+    });
   });
 
   test('does not write to the event store if a command fails.', async () => {
@@ -293,6 +298,11 @@ suite('integrationTests', function () {
     assert.that(event.payload.name).is.equalTo('joinAndFailFailed');
     assert.that(event.payload.data.reason).is.equalTo('Something, somewhere went horribly wrong...');
     assert.that(event.payload.metadata.correlationId).is.equalTo(command.metadata.correlationId);
+    assert.that(event.payload.metadata.isAuthorized).is.equalTo({
+      owner: command.user.id,
+      forAuthenticated: false,
+      forPublic: false
+    });
   });
 
   test('writes to the event store if a command is handled successfully.', async () => {
