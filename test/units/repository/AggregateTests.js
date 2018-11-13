@@ -319,6 +319,27 @@ suite('Aggregate', () => {
             assert.that(aggregate.api.forEvents.state.destination).is.undefined();
             assert.that(aggregate.api.forEvents.state.participants).is.equalTo([ 'Jane Doe' ]);
           });
+
+          test('correctly resets arrays.', async () => {
+            const aggregate = new Aggregate.Readable({
+              writeModel,
+              context: { name: 'planning' },
+              aggregate: { name: 'peerGroup', id: uuid() }
+            });
+
+            aggregate.api.forEvents.setState({
+              initiator: 'Jane Doe',
+              participants: [ 'Jane Doe' ]
+            });
+
+            aggregate.api.forEvents.setState({
+              participants: []
+            });
+
+            assert.that(aggregate.api.forEvents.state.initiator).is.equalTo('Jane Doe');
+            assert.that(aggregate.api.forEvents.state.destination).is.undefined();
+            assert.that(aggregate.api.forEvents.state.participants).is.equalTo([]);
+          });
         });
       });
     });

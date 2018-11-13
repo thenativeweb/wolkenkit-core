@@ -94,7 +94,15 @@ class Readable {
     this.api.forEvents.id = this.api.forReadOnly.id;
     this.api.forEvents.state = this.api.forReadOnly.state;
     this.api.forEvents.setState = newState => {
-      merge(this.api.forEvents.state, newState);
+      for (const [ key, value ] of Object.entries(newState)) {
+        if (key === 'isAuthorized') {
+          merge(this.api.forEvents.state[key], value);
+
+          continue;
+        }
+
+        this.api.forEvents.state[key] = value;
+      }
     };
   }
 
