@@ -8,7 +8,7 @@ const impersonateCommand = async function ({ command }) {
   }
 
   if (!command.custom.asUser) {
-    return;
+    return command;
   }
   if (!command.user.token['can-impersonate']) {
     throw new errors.CommandRejected('Impersonation denied.');
@@ -17,6 +17,8 @@ const impersonateCommand = async function ({ command }) {
   command.addToken({ sub: command.custom.asUser });
 
   Reflect.deleteProperty(command.custom, 'asUser');
+
+  return command;
 };
 
 module.exports = impersonateCommand;

@@ -1,9 +1,16 @@
 'use strict';
 
-const { only } = require('wolkenkit-command-tools');
+const {
+  forAuthenticated,
+  forOwner,
+  forPublic,
+  reject,
+  transferOwnership,
+  withOwnership
+} = require('wolkenkit-application-tools');
 
 const wasAlreadyJoinedBy = function (peerGroup, participant) {
-  return peerGroup.state.participants.indexOf(participant) !== -1;
+  return peerGroup.state.participants.includes(participant);
 };
 
 const initialState = {
@@ -11,26 +18,6 @@ const initialState = {
   destination: undefined,
   participants: [],
   isAuthorized: {
-    commands: {
-      start: { forPublic: true },
-      validateAggregateApi: { forPublic: true },
-      startForOwner: { forAuthenticated: false, forPublic: false },
-      startForAuthenticated: { forAuthenticated: true, forPublic: false },
-      join: { forPublic: true },
-      joinAndFail: { forPublic: true },
-      joinOnlyForOwner: { forAuthenticated: false, forPublic: false },
-      joinOnlyForAuthenticated: { forAuthenticated: true, forPublic: false },
-      joinForPublic: { forAuthenticated: true, forPublic: true },
-      joinWithFailingMiddleware: { forAuthenticated: true, forPublic: false },
-      joinWithRejectingMiddleware: { forAuthenticated: true, forPublic: false },
-      joinWithPassingMiddleware: { forAuthenticated: true, forPublic: false },
-      requestServices: { forAuthenticated: true, forPublic: false },
-      requestNonExistentService: { forAuthenticated: true, forPublic: false },
-      useLoggerService: { forAuthenticated: true, forPublic: false },
-      loadOtherAggregate: { forAuthenticated: true, forPublic: false },
-      triggerImmediateCommand: { forAuthenticated: true, forPublic: false },
-      triggerLongRunningCommand: { forAuthenticated: true, forPublic: false }
-    },
     events: {
       started: { forPublic: true },
       validatedAggregateApi: { forPublic: true },
@@ -46,9 +33,14 @@ const initialState = {
 };
 
 const commands = {
-  start: [
-    only.ifNotExists(),
-    (peerGroup, command) => {
+  start: {
+    isAuthorized: forPublic(),
+
+    handle (peerGroup, command) {
+      reject(command).if(peerGroup).exists();
+
+      transferOwnership(peerGroup, { to: command.user.id });
+
       peerGroup.events.publish('started', {
         initiator: command.data.initiator,
         destination: command.data.destination
@@ -58,11 +50,26 @@ const commands = {
         participant: command.data.initiator
       });
     }
-  ],
+  },
 
-  validateAggregateApi: [
-    only.ifExists(),
-    peerGroup => {
+  startForOwner: {
+    isAuthorized: forOwner(),
+
+    handle () {}
+  },
+
+  startForAuthenticated: {
+    isAuthorized: forAuthenticated(),
+
+    handle () {}
+  },
+
+  validateAggregateApi: {
+    isAuthorized: forPublic(),
+
+    handle (peerGroup, command) {
+      reject(command).if(peerGroup).doesNotExist();
+
       if (!peerGroup.id) {
         throw new Error('Id is missing.');
       }
@@ -80,11 +87,14 @@ const commands = {
 
       peerGroup.events.publish('validatedAggregateApi', { id });
     }
-  ],
+  },
 
-  join: [
-    only.ifExists(),
-    (peerGroup, command) => {
+  join: {
+    isAuthorized: forPublic(),
+
+    handle (peerGroup, command) {
+      reject(command).if(peerGroup).doesNotExist();
+
       if (wasAlreadyJoinedBy(peerGroup, command.data.participant)) {
         return command.reject('Participant had already joined.');
       }
@@ -93,87 +103,100 @@ const commands = {
         participant: command.data.participant
       });
     }
-  ],
-
-  joinAndFail () {
-    throw new Error('Something, somewhere went horribly wrong...');
   },
 
-  joinOnlyForOwner (peerGroup) {
-    peerGroup.events.publish('joinedOnlyForOwner');
-  },
+  joinAndFail: {
+    isAuthorized: forPublic(),
 
-  joinOnlyForAuthenticated (peerGroup) {
-    peerGroup.events.publish('joinedOnlyForAuthenticated');
-  },
-
-  joinForPublic (peerGroup) {
-    peerGroup.events.publish('joinedForPublic');
-  },
-
-  joinWithFailingMiddleware: [
-    () => {
-      throw new Error('Failed in middleware.');
-    },
-    () => {
-      throw new Error('Invalid operation.');
-    }
-  ],
-
-  joinWithRejectingMiddleware: [
-    (peerGroup, command) => {
-      command.reject('Rejected by middleware.');
-    },
-    () => {
-      throw new Error('Invalid operation.');
-    }
-  ],
-
-  joinWithPassingMiddleware: [
-    () => {
-      // Intentionally left blank.
-    },
-    () => {
-      // Intentionally left blank.
-    }
-  ],
-
-  requestServices (peerGroup, command, services) {
-    if (typeof services !== 'object') {
-      return command.reject('Services are missing.');
+    handle () {
+      throw new Error('Something, somewhere went horribly wrong...');
     }
   },
 
-  requestNonExistentService (peerGroup, command, { nonExistentService }) {
-    nonExistentService.run();
-  },
+  joinOnlyForOwner: {
+    isAuthorized: forOwner(),
 
-  useLoggerService (peerGroup, command, { logger }) {
-    logger.info('Some message from useLoggerService command.');
-  },
-
-  async loadOtherAggregate (peerGroup, command, { app }) {
-    let otherPeerGroup;
-
-    try {
-      otherPeerGroup = await app.planning.peerGroup(command.data.otherAggregateId).read();
-    } catch (ex) {
-      return command.reject(ex.message);
+    handle (peerGroup) {
+      peerGroup.events.publish('joinedOnlyForOwner');
     }
-
-    peerGroup.events.publish('loadedOtherAggregate', otherPeerGroup.state);
   },
 
-  triggerImmediateCommand (peerGroup) {
-    peerGroup.events.publish('finishedImmediateCommand');
+  joinOnlyForAuthenticated: {
+    isAuthorized: forAuthenticated(),
+
+    handle (peerGroup) {
+      peerGroup.events.publish('joinedOnlyForAuthenticated');
+    }
   },
 
-  async triggerLongRunningCommand (peerGroup, command) {
-    await new Promise(resolve => {
-      setTimeout(resolve, command.data.duration);
-    });
+  joinForPublic: {
+    isAuthorized: forPublic(),
 
-    peerGroup.events.publish('finishedLongRunningCommand');
+    handle (peerGroup) {
+      peerGroup.events.publish('joinedForPublic');
+    }
+  },
+
+  requestServices: {
+    isAuthorized: forAuthenticated(),
+
+    handle (peerGroup, command, services) {
+      if (typeof services !== 'object') {
+        return command.reject('Services are missing.');
+      }
+    }
+  },
+
+  requestNonExistentService: {
+    isAuthorized: forAuthenticated(),
+
+    handle (peerGroup, command, { nonExistentService }) {
+      nonExistentService.run();
+    }
+  },
+
+  useLoggerService: {
+    isAuthorized: forAuthenticated(),
+
+    handle (peerGroup, command, { logger }) {
+      logger.info('Some message from useLoggerService command.');
+    }
+  },
+
+  loadOtherAggregate: {
+    isAuthorized: forAuthenticated(),
+
+    async handle (peerGroup, command, { app }) {
+      let otherPeerGroup;
+
+      try {
+        otherPeerGroup = await app.planning.peerGroup(command.data.otherAggregateId).read();
+      } catch (ex) {
+        return command.reject(ex.message);
+      }
+
+      peerGroup.events.publish('loadedOtherAggregate', otherPeerGroup.state);
+    }
+  },
+
+  triggerImmediateCommand: {
+    isAuthorized: forAuthenticated(),
+
+    handle (peerGroup) {
+      peerGroup.events.publish('finishedImmediateCommand');
+    }
+  },
+
+  triggerLongRunningCommand: {
+    isAuthorized: forAuthenticated(),
+
+    async handle (peerGroup, command) {
+      await new Promise(resolve => {
+        setTimeout(resolve, command.data.duration);
+      });
+
+      peerGroup.events.publish('finishedLongRunningCommand');
+    }
   }
 };
 
@@ -211,4 +234,4 @@ const events = {
   finishedLongRunningCommand () {}
 };
 
-module.exports = { initialState, commands, events };
+module.exports = withOwnership({ initialState, commands, events });

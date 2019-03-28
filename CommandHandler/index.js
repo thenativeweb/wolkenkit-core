@@ -1,6 +1,6 @@
 'use strict';
 
-const flatten = require('lodash/flatten');
+const Value = require('validate-value');
 
 const errors = require('../errors'),
       getServices = require('./services/get');
@@ -24,6 +24,72 @@ class CommandHandler {
     this.logger = app.services.getLogger();
   }
 
+  async validateCommand ({ command }) {
+    if (!command) {
+      throw new Error('Command is missing.');
+    }
+
+    const { writeModel } = this;
+
+    const context = writeModel[command.context.name];
+
+    if (!context) {
+      throw new errors.CommandFailed('Invalid context name.');
+    }
+
+    const aggregateDefinition = context[command.aggregate.name];
+
+    if (!aggregateDefinition) {
+      throw new errors.CommandFailed('Invalid aggregate name.');
+    }
+
+    if (!aggregateDefinition.commands || !aggregateDefinition.commands[command.name]) {
+      throw new errors.CommandFailed('Invalid command name.');
+    }
+
+    const { schema } = aggregateDefinition.commands[command.name];
+
+    if (!schema) {
+      return;
+    }
+
+    const value = new Value(schema);
+
+    try {
+      value.validate(command.data, { valueName: 'command.data' });
+    } catch (ex) {
+      throw new errors.CommandFailed(ex.message);
+    }
+  }
+
+  async validateAuthorization ({ command, aggregate }) {
+    if (!command) {
+      throw new Error('Command is missing.');
+    }
+    if (!aggregate) {
+      throw new Error('Aggregate is missing.');
+    }
+
+    const { app, writeModel, repository } = this;
+    const services = getServices({ app, command, repository, writeModel });
+
+    const { isAuthorized } = writeModel[command.context.name][command.aggregate.name].commands[command.name];
+
+    let isAuthorizationValid;
+
+    try {
+      isAuthorizationValid = await isAuthorized(aggregate.api.forReadOnly, command, services);
+    } catch (ex) {
+      throw new errors.CommandRejected('Access denied.');
+    }
+
+    if (isAuthorizationValid) {
+      return;
+    }
+
+    throw new errors.CommandRejected('Access denied.');
+  }
+
   async handle ({ command, aggregate }) {
     if (!command) {
       throw new Error('Command is missing.');
@@ -32,8 +98,6 @@ class CommandHandler {
       throw new Error('Aggregate is missing.');
     }
 
-    const commandHandlers = flatten([ aggregate.definition.commands[command.name] ]);
-
     command.reject = function (reason) {
       throw new errors.CommandRejected(reason);
     };
@@ -41,19 +105,17 @@ class CommandHandler {
     const { app, writeModel, repository } = this;
     const services = getServices({ app, command, repository, writeModel });
 
-    for (let i = 0; i < commandHandlers.length; i++) {
-      const commandHandler = commandHandlers[i];
+    const commandHandler = aggregate.definition.commands[command.name].handle;
 
-      try {
-        await commandHandler(aggregate.api.forCommands, command, services);
-      } catch (ex) {
-        if (ex.code === 'ECOMMANDREJECTED') {
-          throw ex;
-        }
-
-        this.logger.debug('Failed to handle command.', { err: ex });
-        throw new errors.CommandFailed('Failed to handle command.', ex);
+    try {
+      await commandHandler(aggregate.api.forCommands, command, services);
+    } catch (ex) {
+      if (ex.code === 'ECOMMANDREJECTED') {
+        throw ex;
       }
+
+      this.logger.debug('Failed to handle command.', { err: ex });
+      throw new errors.CommandFailed('Failed to handle command.', ex);
     }
   }
 }

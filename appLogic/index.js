@@ -1,15 +1,11 @@
 'use strict';
 
-const Course = require('marble-run'),
-      requireDir = require('require-dir');
+const Course = require('marble-run');
 
 const CommandHandler = require('../CommandHandler'),
-      postProcess = require('./postProcess'),
-      preProcess = require('./preProcess'),
+      impersonateCommand = require('./impersonateCommand'),
+      publishEvents = require('./publishEvents'),
       repository = require('../repository');
-
-const workflow = requireDir();
-const steps = { preProcess, postProcess };
 
 const appLogic = function ({ app, writeModel, eventStore, commandBusConcurrency }) {
   if (!app) {
@@ -58,16 +54,16 @@ const appLogic = function ({ app, writeModel, eventStore, commandBusConcurrency 
         id: command.id,
         routingKey: command.aggregate.id,
         async task () {
-          await workflow.validateCommand({ command, writeModel });
-          await workflow.impersonateCommand({ command });
+          await commandHandler.validateCommand({ command });
 
-          aggregate = await workflow.loadAggregate({ command, repository });
+          command = await impersonateCommand({ command });
 
-          await workflow.process({ command, steps: steps.preProcess, aggregate });
-          await workflow.handleCommand({ command, commandHandler, aggregate });
-          await workflow.process({ command, steps: steps.postProcess, aggregate });
+          aggregate = await repository.loadAggregateFor(command);
 
-          committedEvents = await workflow.saveAggregate({ aggregate, repository });
+          await commandHandler.validateAuthorization({ command, aggregate });
+          await commandHandler.handle({ command, aggregate });
+
+          committedEvents = await repository.saveAggregate(aggregate);
         }
       });
     } catch (ex) {
@@ -89,12 +85,7 @@ const appLogic = function ({ app, writeModel, eventStore, commandBusConcurrency 
         },
         metadata: {
           correlationId: command.metadata.correlationId,
-          causationId: command.id,
-          isAuthorized: {
-            owner: command.user.id,
-            forAuthenticated: false,
-            forPublic: false
-          }
+          causationId: command.id
         }
       });
 
@@ -109,7 +100,7 @@ const appLogic = function ({ app, writeModel, eventStore, commandBusConcurrency 
     logger.info('Handled command.', command);
 
     try {
-      await workflow.publishEvents({
+      await publishEvents({
         eventbus: app.eventbus,
         flowbus: app.flowbus,
         eventStore,

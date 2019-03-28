@@ -17,6 +17,8 @@ const buildCommand = require('../shared/buildCommand'),
       waitForPostgres = require('../shared/waitForPostgres'),
       waitForRabbitMq = require('../shared/waitForRabbitMq');
 
+const isDebugMode = false;
+
 suite('integrationTests', function () {
   this.timeout(15 * 1000);
 
@@ -122,7 +124,8 @@ suite('integrationTests', function () {
       },
       onExit (exitCode) {
         appLifecycle.emit('exit', exitCode);
-      }
+      },
+      silent: !isDebugMode
     });
 
     await new Promise(resolve => setTimeout(resolve, 2 * 1000));
@@ -241,11 +244,6 @@ suite('integrationTests', function () {
     assert.that(event.payload.name).is.equalTo('joinRejected');
     assert.that(event.payload.data.reason).is.equalTo('Peer group does not exist.');
     assert.that(event.payload.metadata.correlationId).is.equalTo(command.metadata.correlationId);
-    assert.that(event.payload.metadata.isAuthorized).is.equalTo({
-      owner: command.user.id,
-      forAuthenticated: false,
-      forPublic: false
-    });
   });
 
   test('does not write to the event store if a command fails.', async () => {
@@ -298,11 +296,6 @@ suite('integrationTests', function () {
     assert.that(event.payload.name).is.equalTo('joinAndFailFailed');
     assert.that(event.payload.data.reason).is.equalTo('Something, somewhere went horribly wrong...');
     assert.that(event.payload.metadata.correlationId).is.equalTo(command.metadata.correlationId);
-    assert.that(event.payload.metadata.isAuthorized).is.equalTo({
-      owner: command.user.id,
-      forAuthenticated: false,
-      forPublic: false
-    });
   });
 
   test('writes to the event store if a command is handled successfully.', async () => {
@@ -904,154 +897,6 @@ suite('integrationTests', function () {
           new Promise(resolve => {
             commandbus.write(start);
             commandbus.write(joinForPublic);
-            resolve();
-          })
-        ]);
-      });
-    });
-
-    suite('granting and revoking access', () => {
-      test('supports granting access for public users.', async () => {
-        const aggregateId = uuid(),
-              sub = uuid();
-
-        const start = buildCommand('planning', 'peerGroup', aggregateId, 'start', {
-          initiator: 'Jane Doe',
-          destination: 'Riva'
-        });
-
-        start.addToken({ sub });
-
-        const authorize = buildCommand('planning', 'peerGroup', aggregateId, 'authorize', {
-          commands: {
-            joinOnlyForAuthenticated: { forPublic: true }
-          }
-        });
-
-        authorize.addToken({ sub });
-
-        const joinOnlyForAuthenticated = buildCommand('planning', 'peerGroup', aggregateId, 'joinOnlyForAuthenticated', {});
-
-        joinOnlyForAuthenticated.addToken({ sub: 'anonymous' });
-
-        await Promise.all([
-          waitForEvent(evt =>
-            evt.name === 'joinedOnlyForAuthenticated' &&
-            evt.aggregate.id === aggregateId),
-          new Promise(resolve => {
-            commandbus.write(start);
-            commandbus.write(authorize);
-            commandbus.write(joinOnlyForAuthenticated);
-            resolve();
-          })
-        ]);
-      });
-
-      test('supports revoking access for public users.', async () => {
-        const aggregateId = uuid(),
-              sub = uuid();
-
-        const start = buildCommand('planning', 'peerGroup', aggregateId, 'start', {
-          initiator: 'Jane Doe',
-          destination: 'Riva'
-        });
-
-        start.addToken({ sub });
-
-        const authorize = buildCommand('planning', 'peerGroup', aggregateId, 'authorize', {
-          commands: {
-            joinForPublic: { forPublic: false }
-          }
-        });
-
-        authorize.addToken({ sub });
-
-        const joinForPublic = buildCommand('planning', 'peerGroup', aggregateId, 'joinForPublic', {});
-
-        joinForPublic.addToken({ sub: 'anonymous' });
-
-        await Promise.all([
-          waitForEvent(evt =>
-            evt.name === 'joinForPublicRejected' &&
-            evt.aggregate.id === aggregateId),
-          new Promise(resolve => {
-            commandbus.write(start);
-            commandbus.write(authorize);
-            commandbus.write(joinForPublic);
-            resolve();
-          })
-        ]);
-      });
-
-      test('supports granting access for authenticated users.', async () => {
-        const aggregateId = uuid(),
-              sub = uuid(),
-              subOther = uuid();
-
-        const start = buildCommand('planning', 'peerGroup', aggregateId, 'start', {
-          initiator: 'Jane Doe',
-          destination: 'Riva'
-        });
-
-        start.addToken({ sub });
-
-        const authorize = buildCommand('planning', 'peerGroup', aggregateId, 'authorize', {
-          commands: {
-            joinOnlyForOwner: { forAuthenticated: true }
-          }
-        });
-
-        authorize.addToken({ sub });
-
-        const joinOnlyForOwner = buildCommand('planning', 'peerGroup', aggregateId, 'joinOnlyForOwner', {});
-
-        joinOnlyForOwner.addToken({ sub: subOther });
-
-        await Promise.all([
-          waitForEvent(evt =>
-            evt.name === 'joinedOnlyForOwner' &&
-            evt.aggregate.id === aggregateId),
-          new Promise(resolve => {
-            commandbus.write(start);
-            commandbus.write(authorize);
-            commandbus.write(joinOnlyForOwner);
-            resolve();
-          })
-        ]);
-      });
-
-      test('supports revoking access for authenticated users.', async () => {
-        const aggregateId = uuid(),
-              sub = uuid(),
-              subOther = uuid();
-
-        const start = buildCommand('planning', 'peerGroup', aggregateId, 'start', {
-          initiator: 'Jane Doe',
-          destination: 'Riva'
-        });
-
-        start.addToken({ sub });
-
-        const authorize = buildCommand('planning', 'peerGroup', aggregateId, 'authorize', {
-          commands: {
-            joinOnlyForAuthenticated: { forAuthenticated: false }
-          }
-        });
-
-        authorize.addToken({ sub });
-
-        const joinOnlyForAuthenticated = buildCommand('planning', 'peerGroup', aggregateId, 'joinOnlyForAuthenticated', {});
-
-        joinOnlyForAuthenticated.addToken({ sub: subOther });
-
-        await Promise.all([
-          waitForEvent(evt =>
-            evt.name === 'joinOnlyForAuthenticatedRejected' &&
-            evt.aggregate.id === aggregateId),
-          new Promise(resolve => {
-            commandbus.write(start);
-            commandbus.write(authorize);
-            commandbus.write(joinOnlyForAuthenticated);
             resolve();
           })
         ]);

@@ -217,17 +217,13 @@ suite('Repository', () => {
         aggregate.instance.revision = 23;
         aggregate.api.forEvents.setState({
           initiator: 'Jane Doe',
-          destination: 'Riva'
+          destination: 'Riva',
+          owner: 'jane.doe'
         });
 
         await repository.saveSnapshotFor(aggregate);
 
         const snapshot = await eventStore.getSnapshot(aggregate.instance.id);
-
-        // The PostgreSQL driver does not return fields that contain the value
-        // undefined. Hence, we need to remove the owner from the aggregate to
-        // ensure that both are considered equal.
-        Reflect.deleteProperty(aggregate.api.forReadOnly.state.isAuthorized, 'owner');
 
         assert.that(snapshot).is.equalTo({
           revision: 23,
