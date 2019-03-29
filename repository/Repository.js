@@ -44,7 +44,7 @@ class Repository {
         throw new Error('Aggregate not found.');
       }
 
-      aggregate.definition.events[event.name](aggregate.api.forEvents, event);
+      aggregate.definition.events[event.name].handle(aggregate.api.forEvents, event);
       aggregate.instance.revision = event.metadata.revision;
     }
 

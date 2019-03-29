@@ -28,7 +28,7 @@
     "processenv": "1.1.0",
     "tailwind": "thenativeweb/tailwind#2ecbca8df66039743ca268f3277ee4cfdd0cfd96",
     "validate-value": "5.0.2",
-    "wolkenkit-application": "thenativeweb/wolkenkit-application#f2405c36d6c6bcc5347fca278e73740565d32809",
+    "wolkenkit-application": "thenativeweb/wolkenkit-application#e595ba1423002de2e8e5a077c3a735473423745f",
     "wolkenkit-eventstore": "thenativeweb/wolkenkit-eventstore#c921bfabcf570ad5c225166e90d1f88534f45b7b"
   },
   "devDependencies": {
@@ -43,9 +43,9 @@
     "runfork": "1.1.0",
     "shelljs": "0.8.3",
     "streamtoarray": "1.1.0",
-    "superagent": "5.0.0",
+    "superagent": "5.0.2",
     "uuidv4": "3.0.1",
-    "wolkenkit-application-tools": "thenativeweb/wolkenkit-application-tools#3d1a625d1744f6012dc48f592f75239064b9c889"
+    "wolkenkit-application-tools": "thenativeweb/wolkenkit-application-tools#5fd454b67290fc739cb6446f54e69cde99f0b0cf"
   },
   "scripts": {
     "build": "docker build -t thenativeweb/wolkenkit-core ."

@@ -125,7 +125,7 @@ class Writable extends Readable {
 
       const previousState = cloneDeep(this.api.forCommands.state);
 
-      this.definition.events[event.name](this.api.forEvents, event);
+      this.definition.events[event.name].handle(this.api.forEvents, event);
 
       const state = cloneDeep(this.api.forCommands.state);
 

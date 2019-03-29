@@ -6,14 +6,12 @@ const applicationManager = require('wolkenkit-application'),
       assert = require('assertthat'),
       eventStore = require('wolkenkit-eventstore/inmemory'),
       record = require('record-stdstreams'),
-      runfork = require('runfork'),
       tailwind = require('tailwind'),
       uuid = require('uuidv4');
 
 const Aggregate = require('../../../repository/Aggregate'),
       buildCommand = require('../../shared/buildCommand'),
       CommandHandler = require('../../../CommandHandler'),
-      env = require('../../shared/env'),
       Repository = require('../../../repository/Repository');
 
 const app = tailwind.createApp({
@@ -28,6 +26,8 @@ suite('CommandHandler', () => {
   const repository = new Repository();
 
   let commandHandler,
+      token,
+      user,
       writeModel;
 
   suiteSetup(async () => {
@@ -42,6 +42,8 @@ suite('CommandHandler', () => {
 
   setup(async () => {
     commandHandler = new CommandHandler({ app, writeModel, repository });
+    token = { sub: uuid() };
+    user = { id: token.sub, token };
   });
 
   teardown(async () => {
@@ -207,7 +209,7 @@ suite('CommandHandler', () => {
             aggregate: { name: 'sampleAggregate' },
             name: 'executeWithIsAuthorizedTrue'
           },
-          metadata: { client: {}},
+          metadata: { client: { user }},
           aggregate: new Aggregate.Readable({
             writeModel,
             context: { name: 'sampleContext' },
@@ -225,7 +227,7 @@ suite('CommandHandler', () => {
             aggregate: { name: 'sampleAggregate' },
             name: 'executeWithIsAuthorizedFalse'
           },
-          metadata: { client: {}},
+          metadata: { client: { user }},
           aggregate: new Aggregate.Readable({
             writeModel,
             context: { name: 'sampleContext' },
@@ -243,7 +245,7 @@ suite('CommandHandler', () => {
             aggregate: { name: 'sampleAggregate' },
             name: 'executeWithIsAuthorizedThrowing'
           },
-          metadata: { client: {}},
+          metadata: { client: { user }},
           aggregate: new Aggregate.Readable({
             writeModel,
             context: { name: 'sampleContext' },
@@ -262,7 +264,7 @@ suite('CommandHandler', () => {
               aggregate: { name: 'sampleAggregate' },
               name: 'executeWithRequestServicesInIsAuthorized'
             },
-            metadata: { client: {}},
+            metadata: { client: { user }},
             aggregate: new Aggregate.Readable({
               writeModel,
               context: { name: 'sampleContext' },
@@ -282,7 +284,7 @@ suite('CommandHandler', () => {
               aggregate: { name: 'sampleAggregate' },
               name: 'executeWithUseLoggerServiceInIsAuthorized'
             },
-            metadata: { client: {}},
+            metadata: { client: { user }},
             aggregate: new Aggregate.Readable({
               writeModel,
               context: { name: 'sampleContext' },
@@ -311,7 +313,7 @@ suite('CommandHandler', () => {
         destination: 'Somewhere over the rainbow'
       });
 
-      command.addInitiator({ token: { sub: uuid() }});
+      command.addInitiator({ token });
 
       const aggregate = new Aggregate.Writable({
         app,
@@ -321,7 +323,7 @@ suite('CommandHandler', () => {
         command
       });
 
-      await commandHandler.handle({ aggregate, metadata: { client: {}}, command });
+      await commandHandler.handle({ aggregate, metadata: { client: { user }}, command });
 
       const uncommittedEvents = aggregate.instance.uncommittedEvents;
 
@@ -355,7 +357,7 @@ suite('CommandHandler', () => {
         participant: 'Jane Doe'
       });
 
-      command.addInitiator({ token: { sub: uuid() }});
+      command.addInitiator({ token });
 
       const aggregate = new Aggregate.Writable({
         app,
@@ -373,7 +375,7 @@ suite('CommandHandler', () => {
       });
 
       await assert.that(async () => {
-        await commandHandler.handle({ aggregate, metadata: { client: {}}, command });
+        await commandHandler.handle({ aggregate, metadata: { client: { user }}, command });
       }).is.throwingAsync(ex =>
         ex.name === 'CommandRejected' &&
         ex.message === 'Participant had already joined.');
@@ -384,7 +386,7 @@ suite('CommandHandler', () => {
         participant: 'Jane Doe'
       });
 
-      command.addInitiator({ token: { sub: uuid() }});
+      command.addInitiator({ token });
 
       const aggregate = new Aggregate.Writable({
         app,
@@ -395,7 +397,7 @@ suite('CommandHandler', () => {
       });
 
       await assert.that(async () => {
-        await commandHandler.handle({ aggregate, metadata: { client: {}}, command });
+        await commandHandler.handle({ aggregate, metadata: { client: { user }}, command });
       }).is.throwingAsync(ex =>
         ex.name === 'CommandFailed' &&
         ex.message === 'Failed to handle command.');
@@ -407,7 +409,7 @@ suite('CommandHandler', () => {
           participant: 'Jane Doe'
         });
 
-        command.addInitiator({ token: { sub: uuid() }});
+        command.addInitiator({ token });
 
         const aggregate = new Aggregate.Writable({
           app,
@@ -418,7 +420,7 @@ suite('CommandHandler', () => {
         });
 
         await assert.that(async () => {
-          await commandHandler.handle({ aggregate, metadata: { client: {}}, command });
+          await commandHandler.handle({ aggregate, metadata: { client: { user }}, command });
         }).is.not.throwingAsync('Services are missing.');
       });
 
@@ -427,7 +429,7 @@ suite('CommandHandler', () => {
           participant: 'Jane Doe'
         });
 
-        command.addInitiator({ token: { sub: uuid() }});
+        command.addInitiator({ token });
 
         const aggregate = new Aggregate.Writable({
           app,
@@ -438,7 +440,7 @@ suite('CommandHandler', () => {
         });
 
         await assert.that(async () => {
-          await commandHandler.handle({ aggregate, metadata: { client: {}}, command });
+          await commandHandler.handle({ aggregate, metadata: { client: { user }}, command });
         }).is.throwingAsync(ex =>
           ex.name === 'CommandFailed' &&
           ex.message === 'Failed to handle command.');
@@ -450,7 +452,7 @@ suite('CommandHandler', () => {
             participant: 'Jane Doe'
           });
 
-          command.addInitiator({ token: { sub: uuid() }});
+          command.addInitiator({ token });
 
           const aggregate = new Aggregate.Writable({
             app,
@@ -462,7 +464,7 @@ suite('CommandHandler', () => {
 
           const stop = record();
 
-          await commandHandler.handle({ aggregate, metadata: { client: {}}, command });
+          await commandHandler.handle({ aggregate, metadata: { client: { user }}, command });
 
           const { stdout, stderr } = stop();
           const logMessage = JSON.parse(stdout);

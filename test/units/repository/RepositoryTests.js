@@ -6,7 +6,6 @@ const applicationManager = require('wolkenkit-application'),
       assert = require('assertthat'),
       cloneDeep = require('lodash/cloneDeep'),
       eventStore = require('wolkenkit-eventstore/inmemory'),
-      runfork = require('runfork'),
       tailwind = require('tailwind'),
       toArray = require('streamtoarray'),
       uuid = require('uuidv4');
@@ -14,7 +13,6 @@ const applicationManager = require('wolkenkit-application'),
 const Aggregate = require('../../../repository/Aggregate'),
       buildCommand = require('../../shared/buildCommand'),
       buildEvent = require('../../shared/buildEvent'),
-      env = require('../../shared/env'),
       Repository = require('../../../repository/Repository');
 
 const app = tailwind.createApp({

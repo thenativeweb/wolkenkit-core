@@ -16,20 +16,7 @@ const wasAlreadyJoinedBy = function (peerGroup, participant) {
 const initialState = {
   initiator: undefined,
   destination: undefined,
-  participants: [],
-  isAuthorized: {
-    events: {
-      started: { forPublic: true },
-      validatedAggregateApi: { forPublic: true },
-      joined: { forPublic: true },
-      loadedOtherAggregate: { forAuthenticated: true, forPublic: true },
-      joinedOnlyForOwner: { forAuthenticated: false, forPublic: false },
-      joinedOnlyForAuthenticated: { forAuthenticated: true, forPublic: false },
-      joinedForPublic: { forAuthenticated: true, forPublic: true },
-      finishedImmediateCommand: { forAuthenticated: true, forPublic: true },
-      finishedLongRunningCommand: { forAuthenticated: true, forPublic: true }
-    }
-  }
+  participants: []
 };
 
 const commands = {
@@ -201,37 +188,87 @@ const commands = {
 };
 
 const events = {
-  started (peerGroup, event) {
-    peerGroup.setState({
-      initiator: event.data.initiator,
-      destination: event.data.destination
-    });
-  },
+  started: {
+    handle (peerGroup, event) {
+      peerGroup.setState({
+        initiator: event.data.initiator,
+        destination: event.data.destination
+      });
+    },
 
-  validatedAggregateApi (peerGroup, event) {
-    if (!peerGroup.id) {
-      throw new Error('Id is missing.');
-    }
-    if (peerGroup.id !== event.data.id) {
-      throw new Error('Aggregate ids are not consistent.');
+    isAuthorized () {
+      return true;
     }
   },
 
-  joined (peerGroup, event) {
-    peerGroup.state.participants.push(event.data.participant);
+  validatedAggregateApi: {
+    handle (peerGroup, event) {
+      if (!peerGroup.id) {
+        throw new Error('Id is missing.');
+      }
+      if (peerGroup.id !== event.data.id) {
+        throw new Error('Aggregate ids are not consistent.');
+      }
+    },
+
+    isAuthorized () {
+      return true;
+    }
   },
 
-  loadedOtherAggregate () {},
+  joined: {
+    handle (peerGroup, event) {
+      peerGroup.state.participants.push(event.data.participant);
+    },
 
-  joinedOnlyForOwner () {},
+    isAuthorized () {
+      return true;
+    }
+  },
 
-  joinedOnlyForAuthenticated () {},
+  loadedOtherAggregate: {
+    handle () {},
 
-  joinedForPublic () {},
+    isAuthorized () {
+      return true;
+    }
+  },
 
-  finishedImmediateCommand () {},
+  joinedOnlyForOwner: {
+    handle () {},
 
-  finishedLongRunningCommand () {}
+    isAuthorized: forOwner()
+  },
+
+  joinedOnlyForAuthenticated: {
+    handle () {},
+
+    isAuthorized: forAuthenticated()
+  },
+
+  joinedForPublic: {
+    handle () {},
+
+    isAuthorized () {
+      return true;
+    }
+  },
+
+  finishedImmediateCommand: {
+    handle () {},
+
+    isAuthorized () {
+      return true;
+    }
+  },
+
+  finishedLongRunningCommand: {
+    handle () {},
+
+    isAuthorized () {
+      return true;
+    }
+  }
 };
 
 module.exports = withOwnership({ initialState, commands, events });

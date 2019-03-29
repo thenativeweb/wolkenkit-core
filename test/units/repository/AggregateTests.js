@@ -126,8 +126,12 @@ suite('Aggregate', () => {
         assert.that(aggregate.definition.commands.join).is.ofType('object');
         assert.that(aggregate.definition.commands.join.isAuthorized).is.ofType('function');
         assert.that(aggregate.definition.commands.join.handle).is.ofType('function');
-        assert.that(aggregate.definition.events.started).is.ofType('function');
-        assert.that(aggregate.definition.events.joined).is.ofType('function');
+        assert.that(aggregate.definition.events.started).is.ofType('object');
+        assert.that(aggregate.definition.events.started.handle).is.ofType('function');
+        assert.that(aggregate.definition.events.started.isAuthorized).is.ofType('function');
+        assert.that(aggregate.definition.events.joined).is.ofType('object');
+        assert.that(aggregate.definition.events.joined.handle).is.ofType('function');
+        assert.that(aggregate.definition.events.joined.isAuthorized).is.ofType('function');
       });
     });
 
@@ -531,8 +535,12 @@ suite('Aggregate', () => {
       assert.that(aggregate.definition.commands.join).is.ofType('object');
       assert.that(aggregate.definition.commands.join.isAuthorized).is.ofType('function');
       assert.that(aggregate.definition.commands.join.handle).is.ofType('function');
-      assert.that(aggregate.definition.events.started).is.ofType('function');
-      assert.that(aggregate.definition.events.joined).is.ofType('function');
+      assert.that(aggregate.definition.events.started).is.ofType('object');
+      assert.that(aggregate.definition.events.started.handle).is.ofType('function');
+      assert.that(aggregate.definition.events.started.isAuthorized).is.ofType('function');
+      assert.that(aggregate.definition.events.joined).is.ofType('object');
+      assert.that(aggregate.definition.events.joined.handle).is.ofType('function');
+      assert.that(aggregate.definition.events.joined.isAuthorized).is.ofType('function');
 
       assert.that(aggregate.instance.id).is.equalTo(aggregateId);
       assert.that(aggregate.instance.revision).is.equalTo(0);
