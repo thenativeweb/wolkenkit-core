@@ -18,63 +18,56 @@ suite('impersonateCommand', () => {
   });
 
   test('does not change the user if the command does not want to impersonate.', async () => {
-    const userId = uuid();
+    const initiatorId = uuid();
 
     const command = buildCommand('planning', 'peerGroup', uuid(), 'start', {
       initiator: 'Jane Doe',
       destination: 'Riva'
     });
 
-    command.addToken({
-      sub: userId
-    });
+    command.addInitiator({ token: { sub: initiatorId }});
 
     await impersonateCommand({ command });
 
-    assert.that(command.user.id).is.equalTo(userId);
+    assert.that(command.initiator.id).is.equalTo(initiatorId);
   });
 
   test('throws an error if the command wants to impersonate, but is not allowed to.', async () => {
-    const userId = uuid();
-    const desiredUserId = uuid();
+    const initiatorId = uuid();
+    const desiredInitiatorId = uuid();
 
     const command = buildCommand('planning', 'peerGroup', uuid(), 'start', {
       initiator: 'Jane Doe',
       destination: 'Riva'
     });
 
-    command.addToken({
-      sub: userId
-    });
+    command.addInitiator({ token: { sub: initiatorId }});
 
-    command.custom.asUser = desiredUserId;
+    command.custom.asInitiator = desiredInitiatorId;
 
     await assert.that(async () => {
       await impersonateCommand({ command });
     }).is.throwingAsync('Impersonation denied.');
 
-    assert.that(command.user.id).is.equalTo(userId);
+    assert.that(command.initiator.id).is.equalTo(initiatorId);
   });
 
   test('impersonates the command if the command wants to impersonate and it is allowed to.', async () => {
-    const userId = uuid();
-    const desiredUserId = uuid();
+    const initiatorId = uuid();
+    const desiredInitiatorId = uuid();
 
     const command = buildCommand('planning', 'peerGroup', uuid(), 'start', {
       initiator: 'Jane Doe',
       destination: 'Riva'
     });
 
-    command.addToken({
-      sub: userId,
-      'can-impersonate': true
-    });
+    command.addInitiator({ token: { sub: initiatorId, 'can-impersonate': true }});
 
-    command.custom.asUser = desiredUserId;
+    command.custom.asInitiator = desiredInitiatorId;
 
     await impersonateCommand({ command });
 
-    assert.that(command.user.id).is.equalTo(desiredUserId);
-    assert.that(command.custom.asUser).is.undefined();
+    assert.that(command.initiator.id).is.equalTo(desiredInitiatorId);
+    assert.that(command.custom.asInitiator).is.undefined();
   });
 });

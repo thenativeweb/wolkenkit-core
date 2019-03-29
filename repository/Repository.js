@@ -20,18 +20,6 @@ class Repository {
     this.eventStore = eventStore;
   }
 
-  async saveSnapshotFor (aggregate) {
-    if (!aggregate) {
-      throw new Error('Aggregate is missing.');
-    }
-
-    await this.eventStore.saveSnapshot({
-      aggregateId: aggregate.instance.id,
-      state: aggregate.api.forReadOnly.state,
-      revision: aggregate.instance.revision
-    });
-  }
-
   async replayAggregate (aggregate) {
     if (!aggregate) {
       throw new Error('Aggregate is missing.');
@@ -46,60 +34,19 @@ class Repository {
       fromRevision = snapshot.revision + 1;
     }
 
-    const eventStream = await this.eventStore.getEventStream(aggregate.instance.id, { fromRevision });
-
-    await new Promise((resolve, reject) => {
-      let onData,
-          onEnd,
-          onError;
-
-      const unsubscribe = function () {
-        eventStream.removeListener('data', onData);
-        eventStream.removeListener('end', onEnd);
-        eventStream.removeListener('error', onError);
-      };
-
-      onData = event => {
-        if (!aggregate.definition.events[event.name]) {
-          return reject(new Error('Aggregate not found.'));
-        }
-
-        try {
-          aggregate.definition.events[event.name](aggregate.api.forEvents, event);
-        } catch (ex) {
-          unsubscribe();
-          eventStream.resume();
-
-          return reject(ex);
-        }
-        aggregate.instance.revision = event.metadata.revision;
-      };
-
-      onEnd = () => {
-        unsubscribe();
-
-        if ((aggregate.instance.revision - fromRevision) >= 100) {
-          process.nextTick(() => {
-            this.saveSnapshotFor(aggregate, err => {
-              if (err) {
-                this.logger.error('Failed to save snapshot.', err);
-              }
-            });
-          });
-        }
-
-        resolve();
-      };
-
-      onError = err => {
-        unsubscribe();
-        reject(err);
-      };
-
-      eventStream.on('data', onData);
-      eventStream.on('end', onEnd);
-      eventStream.on('error', onError);
+    const eventStream = await this.eventStore.getEventStream({
+      aggregateId: aggregate.instance.id,
+      fromRevision
     });
+
+    for await (const event of eventStream) {
+      if (!aggregate.definition.events[event.name]) {
+        throw new Error('Aggregate not found.');
+      }
+
+      aggregate.definition.events[event.name](aggregate.api.forEvents, event);
+      aggregate.instance.revision = event.metadata.revision;
+    }
 
     return aggregate;
   }
@@ -161,7 +108,7 @@ class Repository {
     }
 
     const committedEvents = await this.eventStore.saveEvents({
-      events: aggregate.instance.uncommittedEvents
+      uncommittedEvents: aggregate.instance.uncommittedEvents
     });
 
     return committedEvents;

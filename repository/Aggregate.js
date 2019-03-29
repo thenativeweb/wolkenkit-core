@@ -120,11 +120,16 @@ class Writable extends Readable {
         }
       });
 
-      event.addUser(command.user);
+      event.addInitiator(command.initiator);
       event.metadata.revision = this.instance.revision + this.instance.uncommittedEvents.length + 1;
 
+      const previousState = cloneDeep(this.api.forCommands.state);
+
       this.definition.events[event.name](this.api.forEvents, event);
-      this.instance.uncommittedEvents.push(event);
+
+      const state = cloneDeep(this.api.forCommands.state);
+
+      this.instance.uncommittedEvents.push({ event, previousState, state });
     };
   }
 

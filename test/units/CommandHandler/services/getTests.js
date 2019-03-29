@@ -19,6 +19,7 @@ const app = tailwind.createApp({
 });
 
 const command = buildCommand('planning', 'peerGroup', 'join', {});
+const metadata = { client: {}};
 const repository = new Repository();
 
 suite('getServices', () => {
@@ -46,23 +47,30 @@ suite('getServices', () => {
     }).is.throwing('Command is missing.');
   });
 
-  test('throws an error if repository is missing.', async () => {
+  test('throws an error if metadata are missing.', async () => {
     assert.that(() => {
       getServices({ app, command });
+    }).is.throwing('Metadata are missing.');
+  });
+
+  test('throws an error if repository is missing.', async () => {
+    assert.that(() => {
+      getServices({ app, command, metadata });
     }).is.throwing('Repository is missing.');
   });
 
   test('throws an error if write model is missing.', async () => {
     assert.that(() => {
-      getServices({ app, command, repository });
+      getServices({ app, command, metadata, repository });
     }).is.throwing('Write model is missing.');
   });
 
   test('returns the services.', async () => {
-    const services = getServices({ app, command, repository, writeModel });
+    const services = getServices({ app, command, metadata, repository, writeModel });
 
     assert.that(services).is.ofType('object');
     assert.that(services.app).is.ofType('object');
+    assert.that(services.client).is.ofType('object');
     assert.that(services.logger).is.ofType('object');
   });
 });

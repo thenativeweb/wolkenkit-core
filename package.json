@@ -26,14 +26,14 @@
     "lodash": "4.17.11",
     "marble-run": "0.2.0",
     "processenv": "1.1.0",
-    "tailwind": "thenativeweb/tailwind#c3e8d2ed4450c83ee0ccea825178e31c44a7d8bd",
+    "tailwind": "thenativeweb/tailwind#2ecbca8df66039743ca268f3277ee4cfdd0cfd96",
     "validate-value": "5.0.2",
     "wolkenkit-application": "thenativeweb/wolkenkit-application#f2405c36d6c6bcc5347fca278e73740565d32809",
-    "wolkenkit-eventstore": "2.5.0"
+    "wolkenkit-eventstore": "thenativeweb/wolkenkit-eventstore#c921bfabcf570ad5c225166e90d1f88534f45b7b"
   },
   "devDependencies": {
     "assertthat": "2.0.3",
-    "commands-events": "thenativeweb/commands-events#125d78ab144207dbdcbfe78af7a3e1c880905b92",
+    "commands-events": "thenativeweb/commands-events#313ce3cd1d978fee16c6217d8b1e1c6564d2b99b",
     "common-tags": "1.8.0",
     "hase": "2.0.0",
     "pg": "7.4.3",
@@ -45,7 +45,7 @@
     "streamtoarray": "1.1.0",
     "superagent": "5.0.0",
     "uuidv4": "3.0.1",
-    "wolkenkit-application-tools": "thenativeweb/wolkenkit-application-tools#91d027d5cc344e25117ae16e41f0ae9954aaa372"
+    "wolkenkit-application-tools": "thenativeweb/wolkenkit-application-tools#3d1a625d1744f6012dc48f592f75239064b9c889"
   },
   "scripts": {
     "build": "docker build -t thenativeweb/wolkenkit-core ."

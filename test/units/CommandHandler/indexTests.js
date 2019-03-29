@@ -4,7 +4,7 @@ const path = require('path');
 
 const applicationManager = require('wolkenkit-application'),
       assert = require('assertthat'),
-      EventStore = require('wolkenkit-eventstore/dist/postgres/Eventstore'),
+      eventStore = require('wolkenkit-eventstore/inmemory'),
       record = require('record-stdstreams'),
       runfork = require('runfork'),
       tailwind = require('tailwind'),
@@ -25,8 +25,7 @@ const app = tailwind.createApp({
 });
 
 suite('CommandHandler', () => {
-  const eventStore = new EventStore(),
-        repository = new Repository();
+  const repository = new Repository();
 
   let commandHandler,
       writeModel;
@@ -36,41 +35,17 @@ suite('CommandHandler', () => {
       directory: path.join(__dirname, '..', '..', '..', 'app')
     })).writeModel;
 
-    await eventStore.initialize({
-      url: env.POSTGRES_URL_UNITS,
-      namespace: 'testdomain'
-    });
+    await eventStore.initialize();
 
     repository.initialize({ app, writeModel, eventStore });
   });
 
-  suiteTeardown(async () => {
-    await eventStore.destroy();
+  setup(async () => {
+    commandHandler = new CommandHandler({ app, writeModel, repository });
   });
 
-  setup(async () => {
-    await new Promise(async (resolve, reject) => {
-      try {
-        await runfork({
-          path: path.join(__dirname, '..', '..', 'shared', 'runResetPostgres.js'),
-          env: {
-            NAMESPACE: 'testdomain',
-            URL: env.POSTGRES_URL_UNITS
-          },
-
-          onExit (exitCode) {
-            if (exitCode > 0) {
-              return reject(new Error('Failed to reset PostgreSQL.'));
-            }
-            resolve();
-          }
-        });
-      } catch (ex) {
-        reject(ex);
-      }
-    });
-
-    commandHandler = new CommandHandler({ app, writeModel, repository });
+  teardown(async () => {
+    await eventStore.destroy();
   });
 
   test('is a function.', async () => {
@@ -207,10 +182,19 @@ suite('CommandHandler', () => {
       }).is.throwingAsync('Command is missing.');
     });
 
-    test('throws an error if aggregate is missing.', async () => {
+    test('throws an error if metadata are missing.', async () => {
       await assert.that(async () => {
         await commandHandler.validateAuthorization({
           command: {}
+        });
+      }).is.throwingAsync('Metadata are missing.');
+    });
+
+    test('throws an error if aggregate is missing.', async () => {
+      await assert.that(async () => {
+        await commandHandler.validateAuthorization({
+          command: {},
+          metadata: {}
         });
       }).is.throwingAsync('Aggregate is missing.');
     });
@@ -223,6 +207,7 @@ suite('CommandHandler', () => {
             aggregate: { name: 'sampleAggregate' },
             name: 'executeWithIsAuthorizedTrue'
           },
+          metadata: { client: {}},
           aggregate: new Aggregate.Readable({
             writeModel,
             context: { name: 'sampleContext' },
@@ -240,6 +225,7 @@ suite('CommandHandler', () => {
             aggregate: { name: 'sampleAggregate' },
             name: 'executeWithIsAuthorizedFalse'
           },
+          metadata: { client: {}},
           aggregate: new Aggregate.Readable({
             writeModel,
             context: { name: 'sampleContext' },
@@ -257,6 +243,7 @@ suite('CommandHandler', () => {
             aggregate: { name: 'sampleAggregate' },
             name: 'executeWithIsAuthorizedThrowing'
           },
+          metadata: { client: {}},
           aggregate: new Aggregate.Readable({
             writeModel,
             context: { name: 'sampleContext' },
@@ -275,6 +262,7 @@ suite('CommandHandler', () => {
               aggregate: { name: 'sampleAggregate' },
               name: 'executeWithRequestServicesInIsAuthorized'
             },
+            metadata: { client: {}},
             aggregate: new Aggregate.Readable({
               writeModel,
               context: { name: 'sampleContext' },
@@ -294,6 +282,7 @@ suite('CommandHandler', () => {
               aggregate: { name: 'sampleAggregate' },
               name: 'executeWithUseLoggerServiceInIsAuthorized'
             },
+            metadata: { client: {}},
             aggregate: new Aggregate.Readable({
               writeModel,
               context: { name: 'sampleContext' },
@@ -322,9 +311,7 @@ suite('CommandHandler', () => {
         destination: 'Somewhere over the rainbow'
       });
 
-      command.addToken({
-        sub: uuid()
-      });
+      command.addInitiator({ token: { sub: uuid() }});
 
       const aggregate = new Aggregate.Writable({
         app,
@@ -334,33 +321,33 @@ suite('CommandHandler', () => {
         command
       });
 
-      await commandHandler.handle({ aggregate, command });
+      await commandHandler.handle({ aggregate, metadata: { client: {}}, command });
 
       const uncommittedEvents = aggregate.instance.uncommittedEvents;
 
       assert.that(uncommittedEvents.length).is.equalTo(3);
 
-      assert.that(uncommittedEvents[0].context.name).is.equalTo(command.context.name);
-      assert.that(uncommittedEvents[0].aggregate.name).is.equalTo(command.aggregate.name);
-      assert.that(uncommittedEvents[0].name).is.equalTo('transferredOwnership');
-      assert.that(uncommittedEvents[0].data).is.equalTo({
+      assert.that(uncommittedEvents[0].event.context.name).is.equalTo(command.context.name);
+      assert.that(uncommittedEvents[0].event.aggregate.name).is.equalTo(command.aggregate.name);
+      assert.that(uncommittedEvents[0].event.name).is.equalTo('transferredOwnership');
+      assert.that(uncommittedEvents[0].event.data).is.equalTo({
         from: undefined,
-        to: command.user.id
+        to: command.initiator.id
       });
-      assert.that(uncommittedEvents[0].metadata.revision).is.equalTo(1);
+      assert.that(uncommittedEvents[0].event.metadata.revision).is.equalTo(1);
 
-      assert.that(uncommittedEvents[1].context.name).is.equalTo(command.context.name);
-      assert.that(uncommittedEvents[1].aggregate.name).is.equalTo(command.aggregate.name);
-      assert.that(uncommittedEvents[1].name).is.equalTo('started');
-      assert.that(uncommittedEvents[1].data).is.equalTo(command.data);
-      assert.that(uncommittedEvents[1].metadata.revision).is.equalTo(2);
+      assert.that(uncommittedEvents[1].event.context.name).is.equalTo(command.context.name);
+      assert.that(uncommittedEvents[1].event.aggregate.name).is.equalTo(command.aggregate.name);
+      assert.that(uncommittedEvents[1].event.name).is.equalTo('started');
+      assert.that(uncommittedEvents[1].event.data).is.equalTo(command.data);
+      assert.that(uncommittedEvents[1].event.metadata.revision).is.equalTo(2);
 
-      assert.that(uncommittedEvents[2].context.name).is.equalTo(command.context.name);
-      assert.that(uncommittedEvents[2].aggregate.name).is.equalTo(command.aggregate.name);
-      assert.that(uncommittedEvents[2].name).is.equalTo('joined');
-      assert.that(uncommittedEvents[2].data).is.equalTo({ participant: command.data.initiator });
-      assert.that(uncommittedEvents[2].user.id).is.equalTo(command.user.id);
-      assert.that(uncommittedEvents[2].metadata.revision).is.equalTo(3);
+      assert.that(uncommittedEvents[2].event.context.name).is.equalTo(command.context.name);
+      assert.that(uncommittedEvents[2].event.aggregate.name).is.equalTo(command.aggregate.name);
+      assert.that(uncommittedEvents[2].event.name).is.equalTo('joined');
+      assert.that(uncommittedEvents[2].event.data).is.equalTo({ participant: command.data.initiator });
+      assert.that(uncommittedEvents[2].event.initiator.id).is.equalTo(command.initiator.id);
+      assert.that(uncommittedEvents[2].event.metadata.revision).is.equalTo(3);
     });
 
     test('throws an error for a rejected command.', async () => {
@@ -368,9 +355,7 @@ suite('CommandHandler', () => {
         participant: 'Jane Doe'
       });
 
-      command.addToken({
-        sub: uuid()
-      });
+      command.addInitiator({ token: { sub: uuid() }});
 
       const aggregate = new Aggregate.Writable({
         app,
@@ -388,7 +373,7 @@ suite('CommandHandler', () => {
       });
 
       await assert.that(async () => {
-        await commandHandler.handle({ aggregate, command });
+        await commandHandler.handle({ aggregate, metadata: { client: {}}, command });
       }).is.throwingAsync(ex =>
         ex.name === 'CommandRejected' &&
         ex.message === 'Participant had already joined.');
@@ -399,9 +384,7 @@ suite('CommandHandler', () => {
         participant: 'Jane Doe'
       });
 
-      command.addToken({
-        sub: uuid()
-      });
+      command.addInitiator({ token: { sub: uuid() }});
 
       const aggregate = new Aggregate.Writable({
         app,
@@ -412,7 +395,7 @@ suite('CommandHandler', () => {
       });
 
       await assert.that(async () => {
-        await commandHandler.handle({ aggregate, command });
+        await commandHandler.handle({ aggregate, metadata: { client: {}}, command });
       }).is.throwingAsync(ex =>
         ex.name === 'CommandFailed' &&
         ex.message === 'Failed to handle command.');
@@ -424,9 +407,7 @@ suite('CommandHandler', () => {
           participant: 'Jane Doe'
         });
 
-        command.addToken({
-          sub: uuid()
-        });
+        command.addInitiator({ token: { sub: uuid() }});
 
         const aggregate = new Aggregate.Writable({
           app,
@@ -437,7 +418,7 @@ suite('CommandHandler', () => {
         });
 
         await assert.that(async () => {
-          await commandHandler.handle({ aggregate, command });
+          await commandHandler.handle({ aggregate, metadata: { client: {}}, command });
         }).is.not.throwingAsync('Services are missing.');
       });
 
@@ -446,9 +427,7 @@ suite('CommandHandler', () => {
           participant: 'Jane Doe'
         });
 
-        command.addToken({
-          sub: uuid()
-        });
+        command.addInitiator({ token: { sub: uuid() }});
 
         const aggregate = new Aggregate.Writable({
           app,
@@ -459,7 +438,7 @@ suite('CommandHandler', () => {
         });
 
         await assert.that(async () => {
-          await commandHandler.handle({ aggregate, command });
+          await commandHandler.handle({ aggregate, metadata: { client: {}}, command });
         }).is.throwingAsync(ex =>
           ex.name === 'CommandFailed' &&
           ex.message === 'Failed to handle command.');
@@ -471,9 +450,7 @@ suite('CommandHandler', () => {
             participant: 'Jane Doe'
           });
 
-          command.addToken({
-            sub: uuid()
-          });
+          command.addInitiator({ token: { sub: uuid() }});
 
           const aggregate = new Aggregate.Writable({
             app,
@@ -485,7 +462,7 @@ suite('CommandHandler', () => {
 
           const stop = record();
 
-          await commandHandler.handle({ aggregate, command });
+          await commandHandler.handle({ aggregate, metadata: { client: {}}, command });
 
           const { stdout, stderr } = stop();
           const logMessage = JSON.parse(stdout);

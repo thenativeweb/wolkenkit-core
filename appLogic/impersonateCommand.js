@@ -7,16 +7,16 @@ const impersonateCommand = async function ({ command }) {
     throw new Error('Command is missing.');
   }
 
-  if (!command.custom.asUser) {
+  if (!command.custom.asInitiator) {
     return command;
   }
-  if (!command.user.token['can-impersonate']) {
+  if (!command.initiator.token['can-impersonate']) {
     throw new errors.CommandRejected('Impersonation denied.');
   }
 
-  command.addToken({ sub: command.custom.asUser });
+  command.addInitiator({ token: { sub: command.custom.asInitiator }});
 
-  Reflect.deleteProperty(command.custom, 'asUser');
+  Reflect.deleteProperty(command.custom, 'asInitiator');
 
   return command;
 };

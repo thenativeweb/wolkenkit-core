@@ -43,8 +43,8 @@ const appLogic = function ({ app, writeModel, eventStore, commandBusConcurrency 
     });
   });
 
-  app.commandbus.incoming.on('data', async command => {
-    logger.info('Received command.', command);
+  app.commandbus.incoming.on('data', async ({ command, metadata, actions }) => {
+    logger.info('Received command.', { command, metadata });
 
     let aggregate,
         committedEvents;
@@ -60,16 +60,16 @@ const appLogic = function ({ app, writeModel, eventStore, commandBusConcurrency 
 
           aggregate = await repository.loadAggregateFor(command);
 
-          await commandHandler.validateAuthorization({ command, aggregate });
-          await commandHandler.handle({ command, aggregate });
+          await commandHandler.validateAuthorization({ command, metadata, aggregate });
+          await commandHandler.handle({ command, metadata, aggregate });
 
           committedEvents = await repository.saveAggregate(aggregate);
         }
       });
     } catch (ex) {
-      logger.error('Failed to handle command.', { command, ex });
+      logger.error('Failed to handle command.', { command, metadata, ex });
 
-      command.discard();
+      actions.discard();
 
       const errorEventName =
         ex.code === 'ECOMMANDREJECTED' ?
@@ -89,15 +89,20 @@ const appLogic = function ({ app, writeModel, eventStore, commandBusConcurrency 
         }
       });
 
-      errorEvent.addUser(command.user);
+      errorEvent.addInitiator(command.initiator);
 
-      app.eventbus.outgoing.write(errorEvent);
-      app.flowbus.outgoing.write(errorEvent);
+      // For security reasons, we do not provide any information about the state
+      // in case of an error.
+      const previousState = {},
+            state = {};
+
+      app.eventbus.outgoing.write({ event: errorEvent, metadata: { previousState, state }});
+      app.flowbus.outgoing.write({ event: errorEvent, metadata: { previousState, state }});
 
       return;
     }
 
-    logger.info('Handled command.', command);
+    logger.info('Handled command.', { command, metadata });
 
     try {
       await publishEvents({
@@ -110,7 +115,7 @@ const appLogic = function ({ app, writeModel, eventStore, commandBusConcurrency 
     } catch (ex) {
       app.fail(ex);
     } finally {
-      command.next();
+      actions.next();
     }
   });
 };

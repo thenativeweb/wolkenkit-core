@@ -674,9 +674,7 @@ suite('Aggregate', () => {
                 participant: 'Jane Doe'
               });
 
-              command.addToken({
-                sub: '6db3ef6a-a607-40cc-8108-65e81816b320'
-              });
+              command.addInitiator({ token: { sub: '6db3ef6a-a607-40cc-8108-65e81816b320' }});
 
               const aggregate = new Aggregate.Writable({
                 app,
@@ -700,7 +698,7 @@ suite('Aggregate', () => {
 
               const token = { sub: '6db3ef6a-a607-40cc-8108-65e81816b320' };
 
-              command.addToken(token);
+              command.addInitiator({ token });
 
               const aggregate = new Aggregate.Writable({
                 app,
@@ -719,25 +717,25 @@ suite('Aggregate', () => {
               });
 
               assert.that(aggregate.instance.uncommittedEvents.length).is.equalTo(2);
-              assert.that(aggregate.instance.uncommittedEvents[0].context.name).is.equalTo('planning');
-              assert.that(aggregate.instance.uncommittedEvents[0].aggregate.name).is.equalTo('peerGroup');
-              assert.that(aggregate.instance.uncommittedEvents[0].aggregate.id).is.equalTo(aggregateId);
-              assert.that(aggregate.instance.uncommittedEvents[0].name).is.equalTo('joined');
-              assert.that(aggregate.instance.uncommittedEvents[0].data).is.equalTo({
+              assert.that(aggregate.instance.uncommittedEvents[0].event.context.name).is.equalTo('planning');
+              assert.that(aggregate.instance.uncommittedEvents[0].event.aggregate.name).is.equalTo('peerGroup');
+              assert.that(aggregate.instance.uncommittedEvents[0].event.aggregate.id).is.equalTo(aggregateId);
+              assert.that(aggregate.instance.uncommittedEvents[0].event.name).is.equalTo('joined');
+              assert.that(aggregate.instance.uncommittedEvents[0].event.data).is.equalTo({
                 participant: 'Jane Doe'
               });
-              assert.that(aggregate.instance.uncommittedEvents[0].user.id).is.equalTo(token.sub);
-              assert.that(aggregate.instance.uncommittedEvents[0].metadata.revision).is.equalTo(1);
+              assert.that(aggregate.instance.uncommittedEvents[0].event.initiator.id).is.equalTo(token.sub);
+              assert.that(aggregate.instance.uncommittedEvents[0].event.metadata.revision).is.equalTo(1);
 
-              assert.that(aggregate.instance.uncommittedEvents[1].context.name).is.equalTo('planning');
-              assert.that(aggregate.instance.uncommittedEvents[1].aggregate.name).is.equalTo('peerGroup');
-              assert.that(aggregate.instance.uncommittedEvents[1].aggregate.id).is.equalTo(aggregateId);
-              assert.that(aggregate.instance.uncommittedEvents[1].name).is.equalTo('joined');
-              assert.that(aggregate.instance.uncommittedEvents[1].data).is.equalTo({
+              assert.that(aggregate.instance.uncommittedEvents[1].event.context.name).is.equalTo('planning');
+              assert.that(aggregate.instance.uncommittedEvents[1].event.aggregate.name).is.equalTo('peerGroup');
+              assert.that(aggregate.instance.uncommittedEvents[1].event.aggregate.id).is.equalTo(aggregateId);
+              assert.that(aggregate.instance.uncommittedEvents[1].event.name).is.equalTo('joined');
+              assert.that(aggregate.instance.uncommittedEvents[1].event.data).is.equalTo({
                 participant: 'John Doe'
               });
-              assert.that(aggregate.instance.uncommittedEvents[1].user.id).is.equalTo(token.sub);
-              assert.that(aggregate.instance.uncommittedEvents[1].metadata.revision).is.equalTo(2);
+              assert.that(aggregate.instance.uncommittedEvents[1].event.initiator.id).is.equalTo(token.sub);
+              assert.that(aggregate.instance.uncommittedEvents[1].event.metadata.revision).is.equalTo(2);
             });
 
             test('sets the correlation and the causation id of the new event.', async () => {
@@ -749,7 +747,7 @@ suite('Aggregate', () => {
 
               const token = { sub: '6db3ef6a-a607-40cc-8108-65e81816b320' };
 
-              command.addToken(token);
+              command.addInitiator({ token });
 
               const aggregate = new Aggregate.Writable({
                 app,
@@ -768,10 +766,10 @@ suite('Aggregate', () => {
               });
 
               assert.that(aggregate.instance.uncommittedEvents.length).is.equalTo(2);
-              assert.that(aggregate.instance.uncommittedEvents[0].metadata.correlationId).is.equalTo(command.metadata.correlationId);
-              assert.that(aggregate.instance.uncommittedEvents[0].metadata.causationId).is.equalTo(command.id);
-              assert.that(aggregate.instance.uncommittedEvents[1].metadata.correlationId).is.equalTo(command.metadata.correlationId);
-              assert.that(aggregate.instance.uncommittedEvents[1].metadata.causationId).is.equalTo(command.id);
+              assert.that(aggregate.instance.uncommittedEvents[0].event.metadata.correlationId).is.equalTo(command.metadata.correlationId);
+              assert.that(aggregate.instance.uncommittedEvents[0].event.metadata.causationId).is.equalTo(command.id);
+              assert.that(aggregate.instance.uncommittedEvents[1].event.metadata.correlationId).is.equalTo(command.metadata.correlationId);
+              assert.that(aggregate.instance.uncommittedEvents[1].event.metadata.causationId).is.equalTo(command.id);
             });
 
             test('does not increase the aggregate revision.', async () => {
@@ -783,7 +781,7 @@ suite('Aggregate', () => {
 
               const token = { sub: '6db3ef6a-a607-40cc-8108-65e81816b320' };
 
-              command.addToken(token);
+              command.addInitiator({ token });
 
               const aggregate = new Aggregate.Writable({
                 app,
@@ -809,7 +807,7 @@ suite('Aggregate', () => {
 
               const token = { sub: '6db3ef6a-a607-40cc-8108-65e81816b320' };
 
-              command.addToken(token);
+              command.addInitiator({ token });
 
               const aggregate = new Aggregate.Writable({
                 app,

@@ -5,7 +5,7 @@ const path = require('path');
 const applicationManager = require('wolkenkit-application'),
       assert = require('assertthat'),
       cloneDeep = require('lodash/cloneDeep'),
-      EventStore = require('wolkenkit-eventstore/dist/postgres/Eventstore'),
+      eventStore = require('wolkenkit-eventstore/inmemory'),
       runfork = require('runfork'),
       tailwind = require('tailwind'),
       toArray = require('streamtoarray'),
@@ -26,7 +26,6 @@ const app = tailwind.createApp({
 });
 
 suite('Repository', () => {
-  const eventStore = new EventStore();
   let writeModel;
 
   suiteSetup(async () => {
@@ -34,36 +33,11 @@ suite('Repository', () => {
       directory: path.join(__dirname, '..', '..', '..', 'app')
     })).writeModel;
 
-    await eventStore.initialize({
-      url: env.POSTGRES_URL_UNITS,
-      namespace: 'testdomain'
-    });
+    await eventStore.initialize();
   });
 
-  suiteTeardown(async () => {
+  teardown(async () => {
     await eventStore.destroy();
-  });
-
-  setup(async () => {
-    await new Promise(async (resolve, reject) => {
-      try {
-        await runfork({
-          path: path.join(__dirname, '..', '..', 'shared', 'runResetPostgres.js'),
-          env: {
-            NAMESPACE: 'testdomain',
-            URL: env.POSTGRES_URL_UNITS
-          },
-          onExit (exitCode) {
-            if (exitCode > 0) {
-              return reject(new Error('Failed to reset PostgreSQL.'));
-            }
-            resolve();
-          }
-        });
-      } catch (ex) {
-        reject(ex);
-      }
-    });
   });
 
   test('is a function.', async () => {
@@ -123,7 +97,7 @@ suite('Repository', () => {
         participant: 'Jane Doe'
       });
 
-      command.addToken(token);
+      command.addInitiator({ token });
 
       aggregate = new Aggregate.Writable({
         app,
@@ -148,7 +122,7 @@ suite('Repository', () => {
       test('does nothing when there are no uncommitted events.', async () => {
         await repository.saveAggregate(aggregate);
 
-        const eventStream = await eventStore.getEventStream(aggregate.instance.id);
+        const eventStream = await eventStore.getEventStream({ aggregateId: aggregate.instance.id });
         const events = await toArray(eventStream);
 
         assert.that(events.length).is.equalTo(0);
@@ -159,7 +133,7 @@ suite('Repository', () => {
 
         await repository.saveAggregate(aggregate);
 
-        const eventStream = await eventStore.getEventStream(aggregate.instance.id);
+        const eventStream = await eventStore.getEventStream({ aggregateId: aggregate.instance.id });
         const events = await toArray(eventStream);
 
         assert.that(events.length).is.equalTo(1);
@@ -173,7 +147,7 @@ suite('Repository', () => {
 
         await repository.saveAggregate(aggregate);
 
-        const eventStream = await eventStore.getEventStream(aggregate.instance.id);
+        const eventStream = await eventStore.getEventStream({ aggregateId: aggregate.instance.id });
         const events = await toArray(eventStream);
 
         assert.that(events.length).is.equalTo(2);
@@ -190,45 +164,17 @@ suite('Repository', () => {
         const committedEvents = await repository.saveAggregate(aggregate);
 
         assert.that(committedEvents.length).is.equalTo(2);
-        assert.that(committedEvents[0].metadata.position).is.ofType('number');
-        assert.that(committedEvents[1].metadata.position).is.ofType('number');
-        assert.that(committedEvents[0].metadata.position + 1).is.equalTo(committedEvents[1].metadata.position);
+        assert.that(committedEvents[0].event.metadata.position).is.ofType('number');
+        assert.that(committedEvents[1].event.metadata.position).is.ofType('number');
+        assert.that(committedEvents[0].event.metadata.position + 1).is.equalTo(
+          committedEvents[1].event.metadata.position
+        );
       });
 
       test('returns an empty list of committed events when there were no uncommited events.', async () => {
         const committedEvents = await repository.saveAggregate(aggregate);
 
         assert.that(committedEvents).is.equalTo([]);
-      });
-    });
-
-    suite('saveSnapshotFor', () => {
-      test('is a function.', async () => {
-        assert.that(repository.saveSnapshotFor).is.ofType('function');
-      });
-
-      test('throws an error if aggregate is missing.', async () => {
-        await assert.that(async () => {
-          await repository.saveSnapshotFor();
-        }).is.throwingAsync('Aggregate is missing.');
-      });
-
-      test('saves a snapshot from the given aggregate.', async () => {
-        aggregate.instance.revision = 23;
-        aggregate.api.forEvents.setState({
-          initiator: 'Jane Doe',
-          destination: 'Riva',
-          owner: 'jane.doe'
-        });
-
-        await repository.saveSnapshotFor(aggregate);
-
-        const snapshot = await eventStore.getSnapshot(aggregate.instance.id);
-
-        assert.that(snapshot).is.equalTo({
-          revision: 23,
-          state: aggregate.api.forReadOnly.state
-        });
       });
     });
 
@@ -264,10 +210,15 @@ suite('Repository', () => {
         started.metadata.revision = 1;
         joined.metadata.revision = 2;
 
-        await eventStore.saveEvents({ events: [ started, joined ]});
+        await eventStore.saveEvents({
+          uncommittedEvents: [
+            { event: started, state: {}},
+            { event: joined, state: {}}
+          ]
+        });
 
         command = buildCommand('planning', 'none', aggregate.instance.id, 'nonExistent', {});
-        command.addToken({ sub: uuid() });
+        command.addInitiator({ token: { sub: uuid() }});
 
         aggregate = new Aggregate.Writable({
           app,
@@ -295,7 +246,12 @@ suite('Repository', () => {
         started.metadata.revision = 1;
         joined.metadata.revision = 2;
 
-        await eventStore.saveEvents({ events: [ started, joined ]});
+        await eventStore.saveEvents({
+          uncommittedEvents: [
+            { event: started, state: {}},
+            { event: joined, state: {}}
+          ]
+        });
 
         const aggregateReplayed = await repository.replayAggregate(aggregate);
 
@@ -305,75 +261,34 @@ suite('Repository', () => {
       });
 
       test('applies previously saved snapshots and events.', async () => {
-        const snapshot = {
-          aggregateId: aggregate.instance.id,
-          state: { initiator: 'Jane Doe', destination: 'Riva', participants: []},
-          revision: 100
-        };
+        const joinedFirst = buildEvent('planning', 'peerGroup', aggregate.instance.id, 'joined', {
+          participant: 'Jenny Doe'
+        });
 
-        const joined = buildEvent('planning', 'peerGroup', aggregate.instance.id, 'joined', {
+        const joinedSecond = buildEvent('planning', 'peerGroup', aggregate.instance.id, 'joined', {
           participant: 'Jane Doe'
         });
 
-        joined.metadata.revision = 101;
+        joinedFirst.metadata.revision = 100;
+        joinedSecond.metadata.revision = 101;
 
-        await eventStore.saveSnapshot(snapshot);
-        await eventStore.saveEvents({ events: [ joined ]});
+        await eventStore.saveEvents({
+          uncommittedEvents: [
+            {
+              event: joinedFirst,
+              state: { initiator: 'Jane Doe', destination: 'Riva', participants: [ 'Jenny Doe' ]}
+            },
+            {
+              event: joinedSecond, state: {}
+            }
+          ]
+        });
 
         const aggregateReplayed = await repository.replayAggregate(aggregate);
 
         assert.that(aggregateReplayed.api.forReadOnly.state.initiator).is.equalTo('Jane Doe');
         assert.that(aggregateReplayed.api.forReadOnly.state.destination).is.equalTo('Riva');
-        assert.that(aggregateReplayed.api.forReadOnly.state.participants).is.equalTo([ 'Jane Doe' ]);
-      });
-
-      test('does not save a snapshot when only a few events were replayed.', async () => {
-        const started = buildEvent('planning', 'peerGroup', aggregate.instance.id, 'started', {
-          participant: 'Jane Doe'
-        });
-        const joined = buildEvent('planning', 'peerGroup', aggregate.instance.id, 'joined', {
-          participant: 'Jane Doe'
-        });
-
-        started.metadata.revision = 1;
-        joined.metadata.revision = 2;
-
-        await eventStore.saveEvents({ events: [ started, joined ]});
-
-        let wasCalled = false;
-
-        repository.saveSnapshotFor = async () => {
-          wasCalled = true;
-        };
-
-        await repository.replayAggregate(aggregate);
-
-        assert.that(wasCalled).is.false();
-      });
-
-      test('saves a snapshot when lots of events were replayed.', async () => {
-        const started = buildEvent('planning', 'peerGroup', aggregate.instance.id, 'started', {
-          participant: 'Jane Doe'
-        });
-        const joined = buildEvent('planning', 'peerGroup', aggregate.instance.id, 'joined', {
-          participant: 'Jane Doe'
-        });
-
-        started.metadata.revision = 1;
-        joined.metadata.revision = started.metadata.revision + 100;
-
-        await eventStore.saveEvents({ events: [ started, joined ]});
-
-        let wasCalled = false;
-
-        repository.saveSnapshotFor = async function (aggregateForSnapshot) {
-          wasCalled = true;
-          assert.that(aggregateForSnapshot.instance.id).is.equalTo(aggregate.instance.id);
-        };
-
-        await repository.replayAggregate(aggregate);
-
-        assert.that(wasCalled).is.true();
+        assert.that(aggregateReplayed.api.forReadOnly.state.participants).is.equalTo([ 'Jenny Doe', 'Jane Doe' ]);
       });
     });
 

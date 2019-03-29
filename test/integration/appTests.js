@@ -4,7 +4,7 @@ const { EventEmitter } = require('events'),
       path = require('path');
 
 const assert = require('assertthat'),
-      EventStore = require('wolkenkit-eventstore/dist/postgres/Eventstore'),
+      EventStore = require('wolkenkit-eventstore/lib/postgres/EventStore'),
       hase = require('hase'),
       request = require('superagent'),
       runfork = require('runfork'),
@@ -35,16 +35,18 @@ suite('integrationTests', function () {
 
   const waitForEvent = async function (predicate) {
     const getOnData = function (bus, resolve) {
-      const onData = function (event) {
-        event.next();
+      const onData = function (message) {
+        message.next();
 
-        if (!predicate(event.payload)) {
+        const { event, metadata } = message.payload;
+
+        if (!predicate({ event, metadata })) {
           return;
         }
 
         bus.pause();
         bus.removeListener('data', onData);
-        resolve(event);
+        resolve({ event, metadata });
       };
 
       return onData;
@@ -144,76 +146,24 @@ suite('integrationTests', function () {
     await stopApp();
   });
 
-  test('exits when the connection to the command bus / event bus / flow bus is lost.', async function () {
-    this.timeout(25 * 1000);
-
-    await new Promise((resolve, reject) => {
-      try {
-        appLifecycle.once('exit', async () => {
-          try {
-            shell.exec('docker start rabbitmq-integration');
-            await waitForRabbitMq({ url: env.RABBITMQ_URL_INTEGRATION });
-          } catch (ex) {
-            return reject(ex);
-          }
-          resolve();
-        });
-
-        shell.exec('docker kill rabbitmq-integration');
-      } catch (ex) {
-        reject(ex);
-      }
-    });
-  });
-
-  test('exits when the connection to the event store is lost.', async () => {
-    await new Promise((resolve, reject) => {
-      try {
-        appLifecycle.once('exit', async () => {
-          try {
-            shell.exec('docker start postgres-integration');
-            await waitForPostgres({
-              url: env.POSTGRES_URL_INTEGRATION
-            });
-
-            // We need to wait for a few seconds after having started
-            // PostgreSQL, as it (for whatever reason) takes a long time to
-            // actually become available. If we don't do a sleep here, we run
-            // into "the database system is starting up" errors.
-            await new Promise(resolveTimeout => setTimeout(resolveTimeout, 5 * 1000));
-          } catch (ex) {
-            return reject(ex);
-          }
-          resolve();
-        });
-
-        shell.exec('docker kill postgres-integration');
-      } catch (ex) {
-        reject(ex);
-      }
-    });
-  });
-
   test('does not write to the event store if a command is rejected.', async () => {
     const command = buildCommand('planning', 'peerGroup', uuid(), 'join', {
       participant: 'John Doe'
     });
 
-    command.addToken({
-      sub: uuid()
-    });
+    command.addInitiator({ token: { sub: uuid() }});
 
     await Promise.all([
-      waitForEvent(event =>
+      waitForEvent(({ event }) =>
         event.name === 'joinRejected' &&
         event.aggregate.id === command.aggregate.id),
       new Promise(resolve => {
-        commandbus.write(command);
+        commandbus.write({ command, metadata: { client: {}}});
         resolve();
       })
     ]);
 
-    const eventStream = await eventStore.getEventStream(command.aggregate.id);
+    const eventStream = await eventStore.getEventStream({ aggregateId: command.aggregate.id });
     const events = await toArray(eventStream);
 
     assert.that(events.length).is.equalTo(0);
@@ -224,26 +174,24 @@ suite('integrationTests', function () {
       participant: 'John Doe'
     });
 
-    command.addToken({
-      sub: uuid()
-    });
+    command.addInitiator({ token: { sub: uuid() }});
 
-    const [ event ] = await Promise.all([
-      waitForEvent(evt =>
-        evt.name === 'joinRejected' &&
-        evt.aggregate.id === command.aggregate.id),
+    const [ joinRejected ] = await Promise.all([
+      waitForEvent(({ event }) =>
+        event.name === 'joinRejected' &&
+        event.aggregate.id === command.aggregate.id),
       new Promise(resolve => {
-        commandbus.write(command);
+        commandbus.write({ command, metadata: { client: {}}});
         resolve();
       })
     ]);
 
-    assert.that(event.payload.context.name).is.equalTo('planning');
-    assert.that(event.payload.aggregate.name).is.equalTo('peerGroup');
-    assert.that(event.payload.aggregate.id).is.equalTo(command.aggregate.id);
-    assert.that(event.payload.name).is.equalTo('joinRejected');
-    assert.that(event.payload.data.reason).is.equalTo('Peer group does not exist.');
-    assert.that(event.payload.metadata.correlationId).is.equalTo(command.metadata.correlationId);
+    assert.that(joinRejected.event.context.name).is.equalTo('planning');
+    assert.that(joinRejected.event.aggregate.name).is.equalTo('peerGroup');
+    assert.that(joinRejected.event.aggregate.id).is.equalTo(command.aggregate.id);
+    assert.that(joinRejected.event.name).is.equalTo('joinRejected');
+    assert.that(joinRejected.event.data.reason).is.equalTo('Peer group does not exist.');
+    assert.that(joinRejected.event.metadata.correlationId).is.equalTo(command.metadata.correlationId);
   });
 
   test('does not write to the event store if a command fails.', async () => {
@@ -251,21 +199,19 @@ suite('integrationTests', function () {
       participant: 'John Doe'
     });
 
-    command.addToken({
-      sub: uuid()
-    });
+    command.addInitiator({ token: { sub: uuid() }});
 
     await Promise.all([
-      waitForEvent(event =>
+      waitForEvent(({ event }) =>
         event.name === 'joinAndFailFailed' &&
         event.aggregate.id === command.aggregate.id),
       new Promise(resolve => {
-        commandbus.write(command);
+        commandbus.write({ command, metadata: { client: {}}});
         resolve();
       })
     ]);
 
-    const eventStream = await eventStore.getEventStream(command.aggregate.id);
+    const eventStream = await eventStore.getEventStream({ aggregateId: command.aggregate.id });
     const events = await toArray(eventStream);
 
     assert.that(events.length).is.equalTo(0);
@@ -276,26 +222,24 @@ suite('integrationTests', function () {
       participant: 'John Doe'
     });
 
-    command.addToken({
-      sub: uuid()
-    });
+    command.addInitiator({ token: { sub: uuid() }});
 
-    const [ event ] = await Promise.all([
-      waitForEvent(evt =>
-        evt.name === 'joinAndFailFailed' &&
-        evt.aggregate.id === command.aggregate.id),
+    const [ joinAndFailFailed ] = await Promise.all([
+      waitForEvent(({ event }) =>
+        event.name === 'joinAndFailFailed' &&
+        event.aggregate.id === command.aggregate.id),
       new Promise(resolve => {
-        commandbus.write(command);
+        commandbus.write({ command, metadata: { client: {}}});
         resolve();
       })
     ]);
 
-    assert.that(event.payload.context.name).is.equalTo('planning');
-    assert.that(event.payload.aggregate.name).is.equalTo('peerGroup');
-    assert.that(event.payload.aggregate.id).is.equalTo(command.aggregate.id);
-    assert.that(event.payload.name).is.equalTo('joinAndFailFailed');
-    assert.that(event.payload.data.reason).is.equalTo('Something, somewhere went horribly wrong...');
-    assert.that(event.payload.metadata.correlationId).is.equalTo(command.metadata.correlationId);
+    assert.that(joinAndFailFailed.event.context.name).is.equalTo('planning');
+    assert.that(joinAndFailFailed.event.aggregate.name).is.equalTo('peerGroup');
+    assert.that(joinAndFailFailed.event.aggregate.id).is.equalTo(command.aggregate.id);
+    assert.that(joinAndFailFailed.event.name).is.equalTo('joinAndFailFailed');
+    assert.that(joinAndFailFailed.event.data.reason).is.equalTo('Something, somewhere went horribly wrong...');
+    assert.that(joinAndFailFailed.event.metadata.correlationId).is.equalTo(command.metadata.correlationId);
   });
 
   test('writes to the event store if a command is handled successfully.', async () => {
@@ -304,21 +248,19 @@ suite('integrationTests', function () {
       destination: 'Somewhere over the rainbow'
     });
 
-    command.addToken({
-      sub: uuid()
-    });
+    command.addInitiator({ token: { sub: uuid() }});
 
     await Promise.all([
-      waitForEvent(event =>
+      waitForEvent(({ event }) =>
         event.name === 'joined' &&
         event.aggregate.id === command.aggregate.id),
       new Promise(resolve => {
-        commandbus.write(command);
+        commandbus.write({ command, metadata: { client: {}}});
         resolve();
       })
     ]);
 
-    const eventStream = await eventStore.getEventStream(command.aggregate.id);
+    const eventStream = await eventStore.getEventStream({ aggregateId: command.aggregate.id });
     const events = await toArray(eventStream);
 
     assert.that(events.length).is.equalTo(3);
@@ -333,46 +275,46 @@ suite('integrationTests', function () {
       destination: 'Somewhere over the rainbow'
     });
 
-    command.addToken({
-      sub: uuid()
-    });
+    command.addInitiator({ token: { sub: uuid() }});
 
-    const [[ eventStarted, eventJoined ]] = await Promise.all([
+    const [[ started, joined ]] = await Promise.all([
       new Promise(async resolve => {
-        const evtStarted = await waitForEvent(evt =>
-          evt.name === 'started' &&
-          evt.aggregate.id === command.aggregate.id);
+        const eventStarted = await waitForEvent(({ event }) =>
+          event.name === 'started' &&
+          event.aggregate.id === command.aggregate.id);
 
-        const evtJoined = await waitForEvent(evt =>
-          evt.name === 'joined' &&
-          evt.aggregate.id === command.aggregate.id);
+        const eventJoined = await waitForEvent(({ event }) =>
+          event.name === 'joined' &&
+          event.aggregate.id === command.aggregate.id);
 
-        resolve([ evtStarted, evtJoined ]);
+        resolve([ eventStarted, eventJoined ]);
       }),
       new Promise(resolve => {
-        commandbus.write(command);
+        commandbus.write({ command, metadata: { client: {}}});
         resolve();
       })
     ]);
 
-    assert.that(eventStarted.payload.context.name).is.equalTo('planning');
-    assert.that(eventStarted.payload.aggregate.name).is.equalTo('peerGroup');
-    assert.that(eventStarted.payload.aggregate.id).is.equalTo(command.aggregate.id);
-    assert.that(eventStarted.payload.name).is.equalTo('started');
-    assert.that(eventStarted.payload.data.initiator).is.equalTo(command.data.initiator);
-    assert.that(eventStarted.payload.data.destination).is.equalTo(command.data.destination);
-    assert.that(eventStarted.payload.metadata.correlationId).is.equalTo(command.metadata.correlationId);
-    assert.that(eventStarted.payload.metadata.position).is.ofType('number');
+    assert.that(started.event.context.name).is.equalTo('planning');
+    assert.that(started.event.aggregate.name).is.equalTo('peerGroup');
+    assert.that(started.event.aggregate.id).is.equalTo(command.aggregate.id);
+    assert.that(started.event.name).is.equalTo('started');
+    assert.that(started.event.data.initiator).is.equalTo(command.data.initiator);
+    assert.that(started.event.data.destination).is.equalTo(command.data.destination);
+    assert.that(started.event.metadata.correlationId).is.equalTo(command.metadata.correlationId);
+    assert.that(started.event.metadata.position).is.ofType('number');
 
-    assert.that(eventJoined.payload.context.name).is.equalTo('planning');
-    assert.that(eventJoined.payload.aggregate.name).is.equalTo('peerGroup');
-    assert.that(eventJoined.payload.aggregate.id).is.equalTo(command.aggregate.id);
-    assert.that(eventJoined.payload.name).is.equalTo('joined');
-    assert.that(eventJoined.payload.data.participant).is.equalTo(command.data.initiator);
-    assert.that(eventJoined.payload.metadata.correlationId).is.equalTo(command.metadata.correlationId);
-    assert.that(eventJoined.payload.metadata.position).is.ofType('number');
+    assert.that(joined.event.context.name).is.equalTo('planning');
+    assert.that(joined.event.aggregate.name).is.equalTo('peerGroup');
+    assert.that(joined.event.aggregate.id).is.equalTo(command.aggregate.id);
+    assert.that(joined.event.name).is.equalTo('joined');
+    assert.that(joined.event.data.participant).is.equalTo(command.data.initiator);
+    assert.that(joined.event.metadata.correlationId).is.equalTo(command.metadata.correlationId);
+    assert.that(joined.event.metadata.position).is.ofType('number');
 
-    assert.that(eventStarted.payload.metadata.position + 1).is.equalTo(eventJoined.payload.metadata.position);
+    assert.that(started.event.metadata.position + 1).is.equalTo(
+      joined.event.metadata.position
+    );
   });
 
   test('publishes a <Command>Failed event if the context does not exist.', async () => {
@@ -380,25 +322,23 @@ suite('integrationTests', function () {
       participant: 'John Doe'
     });
 
-    command.addToken({
-      sub: uuid()
-    });
+    command.addInitiator({ token: { sub: uuid() }});
 
-    const [ event ] = await Promise.all([
-      waitForEvent(evt =>
-        evt.name === 'joinFailed' &&
-        evt.aggregate.id === command.aggregate.id),
+    const [ joinFailed ] = await Promise.all([
+      waitForEvent(({ event }) =>
+        event.name === 'joinFailed' &&
+        event.aggregate.id === command.aggregate.id),
       new Promise(resolve => {
-        commandbus.write(command);
+        commandbus.write({ command, metadata: { client: {}}});
         resolve();
       })
     ]);
 
-    assert.that(event.payload.context.name).is.equalTo('nonexistent');
-    assert.that(event.payload.aggregate.name).is.equalTo('peerGroup');
-    assert.that(event.payload.aggregate.id).is.equalTo(command.aggregate.id);
-    assert.that(event.payload.name).is.equalTo('joinFailed');
-    assert.that(event.payload.data.reason).is.equalTo('Invalid context name.');
+    assert.that(joinFailed.event.context.name).is.equalTo('nonexistent');
+    assert.that(joinFailed.event.aggregate.name).is.equalTo('peerGroup');
+    assert.that(joinFailed.event.aggregate.id).is.equalTo(command.aggregate.id);
+    assert.that(joinFailed.event.name).is.equalTo('joinFailed');
+    assert.that(joinFailed.event.data.reason).is.equalTo('Invalid context name.');
   });
 
   test('publishes a <Command>Failed event if the aggregate does not exist.', async () => {
@@ -406,25 +346,23 @@ suite('integrationTests', function () {
       participant: 'John Doe'
     });
 
-    command.addToken({
-      sub: uuid()
-    });
+    command.addInitiator({ token: { sub: uuid() }});
 
-    const [ event ] = await Promise.all([
-      waitForEvent(evt =>
-        evt.name === 'joinFailed' &&
-        evt.aggregate.id === command.aggregate.id),
+    const [ joinFailed ] = await Promise.all([
+      waitForEvent(({ event }) =>
+        event.name === 'joinFailed' &&
+        event.aggregate.id === command.aggregate.id),
       new Promise(resolve => {
-        commandbus.write(command);
+        commandbus.write({ command, metadata: { client: {}}});
         resolve();
       })
     ]);
 
-    assert.that(event.payload.context.name).is.equalTo('planning');
-    assert.that(event.payload.aggregate.name).is.equalTo('nonexistent');
-    assert.that(event.payload.aggregate.id).is.equalTo(command.aggregate.id);
-    assert.that(event.payload.name).is.equalTo('joinFailed');
-    assert.that(event.payload.data.reason).is.equalTo('Invalid aggregate name.');
+    assert.that(joinFailed.event.context.name).is.equalTo('planning');
+    assert.that(joinFailed.event.aggregate.name).is.equalTo('nonexistent');
+    assert.that(joinFailed.event.aggregate.id).is.equalTo(command.aggregate.id);
+    assert.that(joinFailed.event.name).is.equalTo('joinFailed');
+    assert.that(joinFailed.event.data.reason).is.equalTo('Invalid aggregate name.');
   });
 
   test('provides the aggregate api.', async () => {
@@ -436,36 +374,32 @@ suite('integrationTests', function () {
       destination: 'Somewhere over the rainbow'
     });
 
-    commandStart.addToken({
-      sub
-    });
+    commandStart.addInitiator({ token: { sub }});
 
     const commandValidateAggregateApi = buildCommand('planning', 'peerGroup', aggregateId, 'validateAggregateApi', {});
 
-    commandValidateAggregateApi.addToken({
-      sub
-    });
+    commandValidateAggregateApi.addInitiator({ token: { sub }});
 
-    const [[ eventValidatedAggregateApi ]] = await Promise.all([
+    const [[ validatedAggregateApi ]] = await Promise.all([
       new Promise(async resolve => {
-        await waitForEvent(evt =>
-          evt.name === 'joined' &&
-          evt.aggregate.id === commandStart.aggregate.id);
+        await waitForEvent(({ event }) =>
+          event.name === 'joined' &&
+          event.aggregate.id === commandStart.aggregate.id);
 
-        const evtValidatedAggregateApi = await waitForEvent(evt =>
-          evt.name === 'validatedAggregateApi' &&
-          evt.aggregate.id === commandValidateAggregateApi.aggregate.id);
+        const eventValidatedAggregateApi = await waitForEvent(({ event }) =>
+          event.name === 'validatedAggregateApi' &&
+          event.aggregate.id === commandValidateAggregateApi.aggregate.id);
 
-        resolve([ evtValidatedAggregateApi ]);
+        resolve([ eventValidatedAggregateApi ]);
       }),
       new Promise(resolve => {
-        commandbus.write(commandStart);
-        commandbus.write(commandValidateAggregateApi);
+        commandbus.write({ command: commandStart, metadata: { client: {}}});
+        commandbus.write({ command: commandValidateAggregateApi, metadata: { client: {}}});
         resolve();
       })
     ]);
 
-    assert.that(eventValidatedAggregateApi.payload.data.id).is.equalTo(aggregateId);
+    assert.that(validatedAggregateApi.event.data.id).is.equalTo(aggregateId);
   });
 
   test('enables commands to load other aggregates.', async () => {
@@ -474,76 +408,66 @@ suite('integrationTests', function () {
       destination: 'Riva'
     });
 
-    start.addToken({
-      sub: uuid()
-    });
+    start.addInitiator({ token: { sub: uuid() }});
 
     const loadOtherAggregate = buildCommand('planning', 'peerGroup', uuid(), 'loadOtherAggregate', {
       otherAggregateId: start.aggregate.id
     });
 
-    loadOtherAggregate.addToken({
-      sub: uuid()
-    });
+    loadOtherAggregate.addInitiator({ token: { sub: uuid() }});
 
     await Promise.all([
-      waitForEvent(evt =>
-        evt.name === 'started'),
+      waitForEvent(({ event }) =>
+        event.name === 'started'),
       new Promise(resolve => {
-        commandbus.write(start);
+        commandbus.write({ command: start, metadata: { client: {}}});
         resolve();
       })
     ]);
 
-    const [ event ] = await Promise.all([
-      waitForEvent(evt =>
-        evt.name === 'loadedOtherAggregate' &&
-        evt.aggregate.id === loadOtherAggregate.aggregate.id),
+    const [ loadedOtherAggregate ] = await Promise.all([
+      waitForEvent(({ event }) =>
+        event.name === 'loadedOtherAggregate' &&
+        event.aggregate.id === loadOtherAggregate.aggregate.id),
       new Promise(resolve => {
-        commandbus.write(loadOtherAggregate);
+        commandbus.write({ command: loadOtherAggregate, metadata: { client: {}}});
         resolve();
       })
     ]);
 
-    assert.that(event.payload.data.initiator).is.equalTo('Jane Doe');
-    assert.that(event.payload.data.destination).is.equalTo('Riva');
+    assert.that(loadedOtherAggregate.event.data.initiator).is.equalTo('Jane Doe');
+    assert.that(loadedOtherAggregate.event.data.destination).is.equalTo('Riva');
   });
 
-  test('runs commands for different aggregate instances in parrallel.', async () => {
+  test('runs commands for different aggregate instances in parallel.', async () => {
     const eventOrder = [];
 
     const blockingCommand = buildCommand('planning', 'peerGroup', uuid(), 'triggerLongRunningCommand', {
       duration: 1000
     });
 
-    blockingCommand.addToken({
-      sub: uuid()
-    });
+    blockingCommand.addInitiator({ token: { sub: uuid() }});
 
     const immediateCommand = buildCommand('planning', 'peerGroup', uuid(), 'triggerImmediateCommand', {
       initiator: 'John Doe',
       destination: 'Somewhere over the rainbow'
     });
 
-    immediateCommand.addToken({
-      sub: uuid()
-    });
+    immediateCommand.addInitiator({ token: { sub: uuid() }});
 
     await Promise.all([
-      waitForEvent(evt => {
-        if (evt.name !== 'transferredOwnership') {
-          eventOrder.push(evt.name);
-        }
+      waitForEvent(({ event }) => {
+        eventOrder.push(event.name);
 
-        if (evt.name === 'finishedLongRunningCommand') {
+        if (event.name === 'finishedLongRunningCommand') {
           return true;
         }
 
         return false;
       }),
       new Promise(resolve => {
-        commandbus.write(blockingCommand);
-        commandbus.write(immediateCommand);
+        commandbus.write({ command: blockingCommand, metadata: { client: {}}});
+        commandbus.write({ command: immediateCommand, metadata: { client: {}}});
         resolve();
       })
     ]);
@@ -563,31 +487,25 @@ suite('integrationTests', function () {
       duration: 1000
     });
 
-    longRunningCommand.addToken({
-      sub: uuid()
-    });
+    longRunningCommand.addInitiator({ token: { sub: uuid() }});
 
     const immediateCommand = buildCommand('planning', 'peerGroup', longRunningCommand.aggregate.id, 'triggerImmediateCommand', {});
 
-    immediateCommand.addToken({
-      sub: uuid()
-    });
+    immediateCommand.addInitiator({ token: { sub: uuid() }});
 
     await Promise.all([
-      waitForEvent(evt => {
-        if (evt.name !== 'transferredOwnership') {
-          eventOrder.push(evt.name);
-        }
+      waitForEvent(({ event }) => {
+        eventOrder.push(event.name);
 
-        if (evt.name === 'finishedImmediateCommand') {
+        if (event.name === 'finishedImmediateCommand') {
           return true;
         }
 
         return false;
       }),
       new Promise(resolve => {
-        commandbus.write(longRunningCommand);
-        commandbus.write(immediateCommand);
+        commandbus.write({ command: longRunningCommand, metadata: { client: {}}});
+        commandbus.write({ command: immediateCommand, metadata: { client: {}}});
         resolve();
       })
     ]);
@@ -601,6 +519,25 @@ suite('integrationTests', function () {
   });
 
   suite('authorization', () => {
+    let tokens,
+        users;
+
+    suiteSetup(async () => {
+      tokens = {
+        jane: { sub: uuid() },
+        john: { sub: uuid() },
+        public: { sub: 'anonymous' },
+        janeCanImpersonate: { sub: uuid(), 'can-impersonate': true }
+      };
+
+      users = {
+        jane: { id: tokens.jane.sub, token: tokens.jane },
+        john: { id: tokens.john.sub, token: tokens.john },
+        public: { id: tokens.public.sub, token: tokens.public },
+        janeCanImpersonate: { id: tokens.janeCanImpersonate.sub, token: tokens.janeCanImpersonate }
+      };
+    });
+
     suite('when access is limited to owner', () => {
       test('accepts commands from the owner.', async () => {
         const start = buildCommand('planning', 'peerGroup', uuid(), 'start', {
@@ -608,23 +545,19 @@ suite('integrationTests', function () {
           destination: 'Riva'
         });
 
-        start.addToken({
-          sub: uuid()
-        });
+        start.addInitiator({ token: tokens.jane });
 
         const joinOnlyForOwner = buildCommand('planning', 'peerGroup', start.aggregate.id, 'joinOnlyForOwner', {});
 
-        joinOnlyForOwner.addToken({
-          sub: start.user.id
-        });
+        joinOnlyForOwner.addInitiator({ token: tokens.jane });
 
         await Promise.all([
-          waitForEvent(evt =>
-            evt.name === 'joinedOnlyForOwner' &&
-            evt.aggregate.id === start.aggregate.id),
+          waitForEvent(({ event }) =>
+            event.name === 'joinedOnlyForOwner' &&
+            event.aggregate.id === start.aggregate.id),
           new Promise(resolve => {
-            commandbus.write(start);
-            commandbus.write(joinOnlyForOwner);
+            commandbus.write({ command: start, metadata: { client: { user: users.jane }}});
+            commandbus.write({ command: joinOnlyForOwner, metadata: { client: { user: users.jane }}});
             resolve();
           })
         ]);
@@ -636,23 +569,19 @@ suite('integrationTests', function () {
           destination: 'Riva'
         });
 
-        start.addToken({
-          sub: uuid()
-        });
+        start.addInitiator({ token: tokens.jane });
 
         const joinOnlyForOwner = buildCommand('planning', 'peerGroup', start.aggregate.id, 'joinOnlyForOwner', {});
 
-        joinOnlyForOwner.addToken({
-          sub: uuid()
-        });
+        joinOnlyForOwner.addInitiator({ token: tokens.john });
 
         await Promise.all([
-          waitForEvent(evt =>
-            evt.name === 'joinOnlyForOwnerRejected' &&
-            evt.aggregate.id === start.aggregate.id),
+          waitForEvent(({ event }) =>
+            event.name === 'joinOnlyForOwnerRejected' &&
+            event.aggregate.id === start.aggregate.id),
           new Promise(resolve => {
-            commandbus.write(start);
-            commandbus.write(joinOnlyForOwner);
+            commandbus.write({ command: start, metadata: { client: { user: users.jane }}});
+            commandbus.write({ command: joinOnlyForOwner, metadata: { client: { user: users.john }}});
             resolve();
           })
         ]);
@@ -664,23 +593,19 @@ suite('integrationTests', function () {
           destination: 'Riva'
         });
 
-        start.addToken({
-          sub: uuid()
-        });
+        start.addInitiator({ token: tokens.jane });
 
         const joinOnlyForOwner = buildCommand('planning', 'peerGroup', start.aggregate.id, 'joinOnlyForOwner', {});
 
-        joinOnlyForOwner.addToken({
-          sub: 'anonymous'
-        });
+        joinOnlyForOwner.addInitiator({ token: tokens.public });
 
         await Promise.all([
-          waitForEvent(evt =>
-            evt.name === 'joinOnlyForOwnerRejected' &&
-            evt.aggregate.id === start.aggregate.id),
+          waitForEvent(({ event }) =>
+            event.name === 'joinOnlyForOwnerRejected' &&
+            event.aggregate.id === start.aggregate.id),
           new Promise(resolve => {
-            commandbus.write(start);
-            commandbus.write(joinOnlyForOwner);
+            commandbus.write({ command: start, metadata: { client: { user: users.jane }}});
+            commandbus.write({ command: joinOnlyForOwner, metadata: { client: { user: users.public }}});
             resolve();
           })
         ]);
@@ -692,16 +617,14 @@ suite('integrationTests', function () {
           destination: 'Riva'
         });
 
-        start.addToken({
-          sub: 'anonymous'
-        });
+        start.addInitiator({ token: tokens.public });
 
         await Promise.all([
-          waitForEvent(evt =>
-            evt.name === 'startForOwnerRejected' &&
-            evt.aggregate.id === start.aggregate.id),
+          waitForEvent(({ event }) =>
+            event.name === 'startForOwnerRejected' &&
+            event.aggregate.id === start.aggregate.id),
           new Promise(resolve => {
-            commandbus.write(start);
+            commandbus.write({ command: start, metadata: { client: { user: users.public }}});
             resolve();
           })
         ]);
@@ -715,23 +638,19 @@ suite('integrationTests', function () {
           destination: 'Riva'
         });
 
-        start.addToken({
-          sub: uuid()
-        });
+        start.addInitiator({ token: tokens.jane });
 
         const joinOnlyForAuthenticated = buildCommand('planning', 'peerGroup', start.aggregate.id, 'joinOnlyForAuthenticated', {});
 
-        joinOnlyForAuthenticated.addToken({
-          sub: start.user.id
-        });
+        joinOnlyForAuthenticated.addInitiator({ token: tokens.jane });
 
         await Promise.all([
-          waitForEvent(evt =>
-            evt.name === 'joinedOnlyForAuthenticated' &&
-            evt.aggregate.id === start.aggregate.id),
+          waitForEvent(({ event }) =>
+            event.name === 'joinedOnlyForAuthenticated' &&
+            event.aggregate.id === start.aggregate.id),
           new Promise(resolve => {
-            commandbus.write(start);
-            commandbus.write(joinOnlyForAuthenticated);
+            commandbus.write({ command: start, metadata: { client: { user: users.jane }}});
+            commandbus.write({ command: joinOnlyForAuthenticated, metadata: { client: { user: users.jane }}});
             resolve();
           })
         ]);
@@ -743,23 +662,19 @@ suite('integrationTests', function () {
           destination: 'Riva'
         });
 
-        start.addToken({
-          sub: uuid()
-        });
+        start.addInitiator({ token: tokens.jane });
 
         const joinOnlyForAuthenticated = buildCommand('planning', 'peerGroup', start.aggregate.id, 'joinOnlyForAuthenticated', {});
 
-        joinOnlyForAuthenticated.addToken({
-          sub: uuid()
-        });
+        joinOnlyForAuthenticated.addInitiator({ token: tokens.john });
 
         await Promise.all([
-          waitForEvent(evt =>
-            evt.name === 'joinedOnlyForAuthenticated' &&
-            evt.aggregate.id === start.aggregate.id),
+          waitForEvent(({ event }) =>
+            event.name === 'joinedOnlyForAuthenticated' &&
+            event.aggregate.id === start.aggregate.id),
           new Promise(resolve => {
-            commandbus.write(start);
-            commandbus.write(joinOnlyForAuthenticated);
+            commandbus.write({ command: start, metadata: { client: { user: users.jane }}});
+            commandbus.write({ command: joinOnlyForAuthenticated, metadata: { client: { user: users.john }}});
             resolve();
           })
         ]);
@@ -773,23 +688,19 @@ suite('integrationTests', function () {
           destination: 'Riva'
         });
 
-        start.addToken({
-          sub: uuid()
-        });
+        start.addInitiator({ token: tokens.jane });
 
         const joinOnlyForAuthenticated = buildCommand('planning', 'peerGroup', start.aggregate.id, 'joinOnlyForAuthenticated', {});
 
-        joinOnlyForAuthenticated.addToken({
-          sub: 'anonymous'
-        });
+        joinOnlyForAuthenticated.addInitiator({ token: tokens.public });
 
         await Promise.all([
-          waitForEvent(evt =>
-            evt.name === 'joinOnlyForAuthenticatedRejected' &&
-            evt.aggregate.id === start.aggregate.id),
+          waitForEvent(({ event }) =>
+            event.name === 'joinOnlyForAuthenticatedRejected' &&
+            event.aggregate.id === start.aggregate.id),
           new Promise(resolve => {
-            commandbus.write(start);
-            commandbus.write(joinOnlyForAuthenticated);
+            commandbus.write({ command: start, metadata: { client: { user: users.jane }}});
+            commandbus.write({ command: joinOnlyForAuthenticated, metadata: { client: { user: users.public }}});
             resolve();
           })
         ]);
@@ -801,46 +712,40 @@ suite('integrationTests', function () {
           destination: 'Riva'
         });
 
-        start.addToken({
-          sub: 'anonymous'
-        });
+        start.addInitiator({ token: tokens.public });
 
         await Promise.all([
-          waitForEvent(evt =>
-            evt.name === 'startForAuthenticatedRejected' &&
-            evt.aggregate.id === start.aggregate.id),
+          waitForEvent(({ event }) =>
+            event.name === 'startForAuthenticatedRejected' &&
+            event.aggregate.id === start.aggregate.id),
           new Promise(resolve => {
-            commandbus.write(start);
+            commandbus.write({ command: start, metadata: { client: { user: users.public }}});
             resolve();
           })
         ]);
       });
     });
 
-    suite('when access is limited to authenticated and public users', () => {
+    suite('when access is limited to public users', () => {
       test('accepts commands from the owner.', async () => {
         const start = buildCommand('planning', 'peerGroup', uuid(), 'start', {
           initiator: 'Jane Doe',
           destination: 'Riva'
         });
 
-        start.addToken({
-          sub: uuid()
-        });
+        start.addInitiator({ token: tokens.jane });
 
         const joinForPublic = buildCommand('planning', 'peerGroup', start.aggregate.id, 'joinForPublic', {});
 
-        joinForPublic.addToken({
-          sub: start.user.id
-        });
+        joinForPublic.addInitiator({ token: tokens.jane });
 
         await Promise.all([
-          waitForEvent(evt =>
-            evt.name === 'joinedForPublic' &&
-            evt.aggregate.id === start.aggregate.id),
+          waitForEvent(({ event }) =>
+            event.name === 'joinedForPublic' &&
+            event.aggregate.id === start.aggregate.id),
           new Promise(resolve => {
-            commandbus.write(start);
-            commandbus.write(joinForPublic);
+            commandbus.write({ command: start, metadata: { client: { user: users.jane }}});
+            commandbus.write({ command: joinForPublic, metadata: { client: { user: users.jane }}});
             resolve();
           })
         ]);
@@ -852,23 +757,19 @@ suite('integrationTests', function () {
           destination: 'Riva'
         });
 
-        start.addToken({
-          sub: uuid()
-        });
+        start.addInitiator({ token: tokens.jane });
 
         const joinForPublic = buildCommand('planning', 'peerGroup', start.aggregate.id, 'joinForPublic', {});
 
-        joinForPublic.addToken({
-          sub: uuid()
-        });
+        joinForPublic.addInitiator({ token: tokens.john });
 
         await Promise.all([
-          waitForEvent(evt =>
-            evt.name === 'joinedForPublic' &&
-            evt.aggregate.id === start.aggregate.id),
+          waitForEvent(({ event }) =>
+            event.name === 'joinedForPublic' &&
+            event.aggregate.id === start.aggregate.id),
           new Promise(resolve => {
-            commandbus.write(start);
-            commandbus.write(joinForPublic);
+            commandbus.write({ command: start, metadata: { client: { user: users.jane }}});
+            commandbus.write({ command: joinForPublic, metadata: { client: { user: users.john }}});
             resolve();
           })
         ]);
@@ -880,84 +781,71 @@ suite('integrationTests', function () {
           destination: 'Riva'
         });
 
-        start.addToken({
-          sub: uuid()
-        });
+        start.addInitiator({ token: tokens.jane });
 
         const joinForPublic = buildCommand('planning', 'peerGroup', start.aggregate.id, 'joinForPublic', {});
 
-        joinForPublic.addToken({
-          sub: 'anonymous'
-        });
+        joinForPublic.addInitiator({ token: tokens.public });
 
         await Promise.all([
-          waitForEvent(evt =>
-            evt.name === 'joinedForPublic' &&
-            evt.aggregate.id === start.aggregate.id),
+          waitForEvent(({ event }) =>
+            event.name === 'joinedForPublic' &&
+            event.aggregate.id === start.aggregate.id),
           new Promise(resolve => {
-            commandbus.write(start);
-            commandbus.write(joinForPublic);
+            commandbus.write({ command: start, metadata: { client: { user: users.jane }}});
+            commandbus.write({ command: joinForPublic, metadata: { client: { user: users.public }}});
             resolve();
           })
         ]);
       });
     });
 
-    test('supports impersonation.', async () => {
-      const originalUserId = uuid(),
-            pretendedUserId = uuid();
+    suite('impersonation', () => {
+      test('supports impersonation.', async () => {
+        const command = buildCommand('planning', 'peerGroup', uuid(), 'start', {
+          initiator: 'John Doe',
+          destination: 'Somewhere over the rainbow'
+        });
 
-      const command = buildCommand('planning', 'peerGroup', uuid(), 'start', {
-        initiator: 'John Doe',
-        destination: 'Somewhere over the rainbow'
+        command.addInitiator({ token: tokens.janeCanImpersonate });
+
+        command.custom.asInitiator = tokens.john.sub;
+
+        const [ joined ] = await Promise.all([
+          waitForEvent(({ event }) =>
+            event.name === 'joined' &&
+            event.aggregate.id === command.aggregate.id),
+          new Promise(resolve => {
+            commandbus.write({ command, metadata: { client: { user: users.janeCanImpersonate }}});
+            resolve();
+          })
+        ]);
+
+        assert.that(joined.event.initiator.id).is.equalTo(tokens.john.sub);
       });
 
-      command.custom.asUser = pretendedUserId;
+      test('does not support impersonation for users who aren\'t allowed to.', async () => {
+        const command = buildCommand('planning', 'peerGroup', uuid(), 'start', {
+          initiator: 'John Doe',
+          destination: 'Somewhere over the rainbow'
+        });
 
-      command.addToken({
-        sub: originalUserId,
-        'can-impersonate': true
+        command.addInitiator({ token: tokens.jane });
+
+        command.custom.asInitiator = tokens.john.sub;
+
+        const [ startRejected ] = await Promise.all([
+          waitForEvent(({ event }) =>
+            event.name === 'startRejected' &&
+            event.aggregate.id === command.aggregate.id),
+          new Promise(resolve => {
+            commandbus.write({ command, metadata: { client: { user: users.jane }}});
+            resolve();
+          })
+        ]);
+
+        assert.that(startRejected.event.initiator.id).is.equalTo(tokens.jane.sub);
       });
-
-      const [ event ] = await Promise.all([
-        waitForEvent(evt =>
-          evt.name === 'joined' &&
-          evt.aggregate.id === command.aggregate.id),
-        new Promise(resolve => {
-          commandbus.write(command);
-          resolve();
-        })
-      ]);
-
-      assert.that(event.payload.user.id).is.equalTo(pretendedUserId);
-    });
-
-    test('does not support impersonation for users who aren\'t allowed to.', async () => {
-      const originalUserId = uuid(),
-            pretendedUserId = uuid();
-
-      const command = buildCommand('planning', 'peerGroup', uuid(), 'start', {
-        initiator: 'John Doe',
-        destination: 'Somewhere over the rainbow'
-      });
-
-      command.custom.asUser = pretendedUserId;
-
-      command.addToken({
-        sub: originalUserId
-      });
-
-      const [ event ] = await Promise.all([
-        waitForEvent(evt =>
-          evt.name === 'startRejected' &&
-          evt.aggregate.id === command.aggregate.id),
-        new Promise(resolve => {
-          commandbus.write(command);
-          resolve();
-        })
-      ]);
-
-      assert.that(event.payload.user.id).is.equalTo(originalUserId);
     });
   });
 
@@ -966,6 +854,58 @@ suite('integrationTests', function () {
       const res = await request.get('http://localhost:3001/v1/status');
 
       assert.that(res.body).is.equalTo({ api: 'v1' });
+    });
+  });
+
+  suite('infrastructure outeage', () => {
+    test('exits when the connection to the command bus / event bus / flow bus is lost.', async function () {
+      this.timeout(25 * 1000);
+
+      await new Promise((resolve, reject) => {
+        try {
+          appLifecycle.once('exit', async () => {
+            try {
+              shell.exec('docker start rabbitmq-integration');
+              await waitForRabbitMq({ url: env.RABBITMQ_URL_INTEGRATION });
+            } catch (ex) {
+              return reject(ex);
+            }
+            resolve();
+          });
+
+          shell.exec('docker kill rabbitmq-integration');
+        } catch (ex) {
+          reject(ex);
+        }
+      });
+    });
+
+    test('exits when the connection to the event store is lost.', async () => {
+      await new Promise((resolve, reject) => {
+        try {
+          appLifecycle.once('exit', async () => {
+            try {
+              shell.exec('docker start postgres-integration');
+              await waitForPostgres({
+                url: env.POSTGRES_URL_INTEGRATION
+              });
+
+              // We need to wait for a few seconds after having started
+              // PostgreSQL, as it (for whatever reason) takes a long time to
+              // actually become available. If we don't do a sleep here, we run
+              // into "the database system is starting up" errors.
+              await new Promise(resolveTimeout => setTimeout(resolveTimeout, 5 * 1000));
+            } catch (ex) {
+              return reject(ex);
+            }
+            resolve();
+          });
+
+          shell.exec('docker kill postgres-integration');
+        } catch (ex) {
+          reject(ex);
+        }
+      });
     });
   });
 });

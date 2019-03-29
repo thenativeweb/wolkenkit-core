@@ -22,18 +22,18 @@ const publishEvents = async function ({ eventbus, flowbus, eventStore, aggregate
   }
 
   for (let i = 0; i < committedEvents.length; i++) {
-    const event = committedEvents[i];
+    const { event, previousState, state } = committedEvents[i];
 
-    eventbus.outgoing.write(event);
-    flowbus.outgoing.write(event);
+    eventbus.outgoing.write({ event, metadata: { previousState, state }});
+    flowbus.outgoing.write({ event, metadata: { previousState, state }});
   }
 
   const lastEventIndex = committedEvents.length - 1;
 
   await eventStore.markEventsAsPublished({
     aggregateId,
-    fromRevision: committedEvents[0].metadata.revision,
-    toRevision: committedEvents[lastEventIndex].metadata.revision
+    fromRevision: committedEvents[0].event.metadata.revision,
+    toRevision: committedEvents[lastEventIndex].event.metadata.revision
   });
 };
 

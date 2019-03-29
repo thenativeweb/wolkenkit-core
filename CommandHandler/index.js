@@ -62,16 +62,19 @@ class CommandHandler {
     }
   }
 
-  async validateAuthorization ({ command, aggregate }) {
+  async validateAuthorization ({ command, metadata, aggregate }) {
     if (!command) {
       throw new Error('Command is missing.');
+    }
+    if (!metadata) {
+      throw new Error('Metadata are missing.');
     }
     if (!aggregate) {
       throw new Error('Aggregate is missing.');
     }
 
     const { app, writeModel, repository } = this;
-    const services = getServices({ app, command, repository, writeModel });
+    const services = getServices({ app, command, metadata, repository, writeModel });
 
     const { isAuthorized } = writeModel[command.context.name][command.aggregate.name].commands[command.name];
 
@@ -90,9 +93,12 @@ class CommandHandler {
     throw new errors.CommandRejected('Access denied.');
   }
 
-  async handle ({ command, aggregate }) {
+  async handle ({ command, metadata, aggregate }) {
     if (!command) {
       throw new Error('Command is missing.');
+    }
+    if (!metadata) {
+      throw new Error('Metadata are missing.');
     }
     if (!aggregate) {
       throw new Error('Aggregate is missing.');
@@ -103,7 +109,7 @@ class CommandHandler {
     };
 
     const { app, writeModel, repository } = this;
-    const services = getServices({ app, command, repository, writeModel });
+    const services = getServices({ app, command, metadata, repository, writeModel });
 
     const commandHandler = aggregate.definition.commands[command.name].handle;
 

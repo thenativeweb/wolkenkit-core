@@ -64,8 +64,10 @@ suite('publishEvents', () => {
 
     eventStarted.metadata.position = 1;
 
-    const aggregateId = uuid(),
-          committedEvents = [ eventStarted ];
+    const aggregateId = uuid();
+    const committedEvents = [
+      { event: eventStarted, state: {}}
+    ];
 
     await assert.that(async () => {
       await publishEvents({
@@ -93,8 +95,10 @@ suite('publishEvents', () => {
 
     eventStarted.metadata.position = 1;
 
-    const aggregateId = uuid(),
-          committedEvents = [ eventStarted ];
+    const aggregateId = uuid();
+    const committedEvents = [
+      { event: eventStarted, state: {}}
+    ];
 
     await assert.that(async () => {
       await publishEvents({
@@ -127,7 +131,9 @@ suite('publishEvents', () => {
     eventStarted.metadata.position = 1;
 
     const aggregateId = uuid();
-    const committedEvents = [ eventStarted ];
+    const committedEvents = [
+      { event: eventStarted, state: {}}
+    ];
 
     await assert.that(async () => {
       await publishEvents({
@@ -161,8 +167,10 @@ suite('publishEvents', () => {
 
     eventStarted.metadata.position = 1;
 
-    const aggregateId = uuid(),
-          committedEvents = [ eventStarted ];
+    const aggregateId = uuid();
+    const committedEvents = [
+      { event: eventStarted, state: {}}
+    ];
 
     await assert.that(async () => {
       await publishEvents({

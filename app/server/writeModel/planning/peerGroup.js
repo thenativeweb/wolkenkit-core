@@ -22,7 +22,7 @@ const initialState = {
       started: { forPublic: true },
       validatedAggregateApi: { forPublic: true },
       joined: { forPublic: true },
-      loadedOtherAggregate: { forAuthenticated: true, forPublic: false },
+      loadedOtherAggregate: { forAuthenticated: true, forPublic: true },
       joinedOnlyForOwner: { forAuthenticated: false, forPublic: false },
       joinedOnlyForAuthenticated: { forAuthenticated: true, forPublic: false },
       joinedForPublic: { forAuthenticated: true, forPublic: true },
@@ -39,7 +39,7 @@ const commands = {
     handle (peerGroup, command) {
       reject(command).if(peerGroup).exists();
 
-      transferOwnership(peerGroup, { to: command.user.id });
+      transferOwnership(peerGroup, { to: command.initiator.id });
 
       peerGroup.events.publish('started', {
         initiator: command.data.initiator,
@@ -138,7 +138,7 @@ const commands = {
   },
 
   requestServices: {
-    isAuthorized: forAuthenticated(),
+    isAuthorized: forPublic(),
 
     handle (peerGroup, command, services) {
       if (typeof services !== 'object') {
@@ -148,7 +148,7 @@ const commands = {
   },
 
   requestNonExistentService: {
-    isAuthorized: forAuthenticated(),
+    isAuthorized: forPublic(),
 
     handle (peerGroup, command, { nonExistentService }) {
       nonExistentService.run();
@@ -156,7 +156,7 @@ const commands = {
   },
 
   useLoggerService: {
-    isAuthorized: forAuthenticated(),
+    isAuthorized: forPublic(),
 
     handle (peerGroup, command, { logger }) {
       logger.info('Some message from useLoggerService command.');
@@ -164,7 +164,7 @@ const commands = {
   },
 
   loadOtherAggregate: {
-    isAuthorized: forAuthenticated(),
+    isAuthorized: forPublic(),
 
     async handle (peerGroup, command, { app }) {
       let otherPeerGroup;
@@ -180,7 +180,7 @@ const commands = {
   },
 
   triggerImmediateCommand: {
-    isAuthorized: forAuthenticated(),
+    isAuthorized: forPublic(),
 
     handle (peerGroup) {
       peerGroup.events.publish('finishedImmediateCommand');
@@ -188,7 +188,7 @@ const commands = {
   },
 
   triggerLongRunningCommand: {
-    isAuthorized: forAuthenticated(),
+    isAuthorized: forPublic(),
 
     async handle (peerGroup, command) {
       await new Promise(resolve => {
