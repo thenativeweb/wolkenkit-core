@@ -10,8 +10,7 @@ const applicationManager = require('wolkenkit-application'),
       toArray = require('streamtoarray'),
       uuid = require('uuidv4');
 
-const Aggregate = require('../../../repository/Aggregate'),
-      buildCommand = require('../../shared/buildCommand'),
+const buildCommand = require('../../shared/buildCommand'),
       buildEvent = require('../../shared/buildEvent'),
       Repository = require('../../../repository/Repository');
 
@@ -97,8 +96,7 @@ suite('Repository', () => {
 
       command.addInitiator({ token });
 
-      aggregate = new Aggregate.Writable({
-        app,
+      aggregate = new app.WritableAggregate({
         writeModel,
         context: { name: 'planning' },
         aggregate: { name: 'peerGroup', id: aggregateId },
@@ -218,8 +216,7 @@ suite('Repository', () => {
         command = buildCommand('planning', 'none', aggregate.instance.id, 'nonExistent', {});
         command.addInitiator({ token: { sub: uuid() }});
 
-        aggregate = new Aggregate.Writable({
-          app,
+        aggregate = new app.WritableAggregate({
           writeModel,
           context: { name: 'planning' },
           aggregate: { name: 'none', id: aggregate.instance.id },
@@ -342,7 +339,7 @@ suite('Repository', () => {
 
         repository.replayAggregate = async function (aggregateReadable) {
           wasCalled = true;
-          assert.that(aggregateReadable).is.instanceOf(Aggregate.Readable);
+          assert.that(aggregateReadable).is.instanceOf(app.ReadableAggregate);
           assert.that(aggregateReadable.instance.id).is.equalTo(aggregateId);
         };
 
@@ -371,7 +368,7 @@ suite('Repository', () => {
 
         repository.replayAggregate = async function (aggregateWritable) {
           wasCalled = true;
-          assert.that(aggregateWritable).is.instanceOf(Aggregate.Writable);
+          assert.that(aggregateWritable).is.instanceOf(app.WritableAggregate);
           assert.that(aggregateWritable.instance.id).is.equalTo(command.aggregate.id);
         };
 

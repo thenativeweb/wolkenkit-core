@@ -9,8 +9,7 @@ const applicationManager = require('wolkenkit-application'),
       tailwind = require('tailwind'),
       uuid = require('uuidv4');
 
-const Aggregate = require('../../../repository/Aggregate'),
-      buildCommand = require('../../shared/buildCommand'),
+const buildCommand = require('../../shared/buildCommand'),
       CommandHandler = require('../../../CommandHandler'),
       Repository = require('../../../repository/Repository');
 
@@ -210,7 +209,7 @@ suite('CommandHandler', () => {
             name: 'executeWithIsAuthorizedTrue'
           },
           metadata: { client: { user }},
-          aggregate: new Aggregate.Readable({
+          aggregate: new app.ReadableAggregate({
             writeModel,
             context: { name: 'sampleContext' },
             aggregate: { name: 'sampleAggregate', id: uuid() }
@@ -228,7 +227,7 @@ suite('CommandHandler', () => {
             name: 'executeWithIsAuthorizedFalse'
           },
           metadata: { client: { user }},
-          aggregate: new Aggregate.Readable({
+          aggregate: new app.ReadableAggregate({
             writeModel,
             context: { name: 'sampleContext' },
             aggregate: { name: 'sampleAggregate', id: uuid() }
@@ -246,7 +245,7 @@ suite('CommandHandler', () => {
             name: 'executeWithIsAuthorizedThrowing'
           },
           metadata: { client: { user }},
-          aggregate: new Aggregate.Readable({
+          aggregate: new app.ReadableAggregate({
             writeModel,
             context: { name: 'sampleContext' },
             aggregate: { name: 'sampleAggregate', id: uuid() }
@@ -265,7 +264,7 @@ suite('CommandHandler', () => {
               name: 'executeWithRequestServicesInIsAuthorized'
             },
             metadata: { client: { user }},
-            aggregate: new Aggregate.Readable({
+            aggregate: new app.ReadableAggregate({
               writeModel,
               context: { name: 'sampleContext' },
               aggregate: { name: 'sampleAggregate', id: uuid() }
@@ -285,7 +284,7 @@ suite('CommandHandler', () => {
               name: 'executeWithUseLoggerServiceInIsAuthorized'
             },
             metadata: { client: { user }},
-            aggregate: new Aggregate.Readable({
+            aggregate: new app.ReadableAggregate({
               writeModel,
               context: { name: 'sampleContext' },
               aggregate: { name: 'sampleAggregate', id: uuid() }
@@ -315,8 +314,7 @@ suite('CommandHandler', () => {
 
       command.addInitiator({ token });
 
-      const aggregate = new Aggregate.Writable({
-        app,
+      const aggregate = new app.WritableAggregate({
         writeModel,
         context: { name: 'planning' },
         aggregate: { name: 'peerGroup', id: command.aggregate.id },
@@ -359,8 +357,7 @@ suite('CommandHandler', () => {
 
       command.addInitiator({ token });
 
-      const aggregate = new Aggregate.Writable({
-        app,
+      const aggregate = new app.WritableAggregate({
         writeModel,
         context: { name: 'planning' },
         aggregate: { name: 'peerGroup', id: command.aggregate.id },
@@ -388,8 +385,7 @@ suite('CommandHandler', () => {
 
       command.addInitiator({ token });
 
-      const aggregate = new Aggregate.Writable({
-        app,
+      const aggregate = new app.WritableAggregate({
         writeModel,
         context: { name: 'planning' },
         aggregate: { name: 'peerGroup', id: command.aggregate.id },
@@ -411,8 +407,7 @@ suite('CommandHandler', () => {
 
         command.addInitiator({ token });
 
-        const aggregate = new Aggregate.Writable({
-          app,
+        const aggregate = new app.WritableAggregate({
           writeModel,
           context: { name: 'planning' },
           aggregate: { name: 'peerGroup', id: command.aggregate.id },
@@ -431,8 +426,7 @@ suite('CommandHandler', () => {
 
         command.addInitiator({ token });
 
-        const aggregate = new Aggregate.Writable({
-          app,
+        const aggregate = new app.WritableAggregate({
           writeModel,
           context: { name: 'planning' },
           aggregate: { name: 'peerGroup', id: command.aggregate.id },
@@ -454,8 +448,7 @@ suite('CommandHandler', () => {
 
           command.addInitiator({ token });
 
-          const aggregate = new Aggregate.Writable({
-            app,
+          const aggregate = new app.WritableAggregate({
             writeModel,
             context: { name: 'planning' },
             aggregate: { name: 'peerGroup', id: command.aggregate.id },

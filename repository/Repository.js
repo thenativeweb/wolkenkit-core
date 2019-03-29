@@ -1,7 +1,5 @@
 'use strict';
 
-const Aggregate = require('./Aggregate');
-
 class Repository {
   initialize ({ app, writeModel, eventStore }) {
     if (!app) {
@@ -68,7 +66,7 @@ class Repository {
       throw new Error('Aggregate id is missing.');
     }
 
-    const newAggregate = new Aggregate.Readable({
+    const newAggregate = new this.app.ReadableAggregate({
       app: this.app,
       writeModel: this.writeModel,
       context,
@@ -85,8 +83,7 @@ class Repository {
       throw new Error('Command is missing.');
     }
 
-    const newAggregate = new Aggregate.Writable({
-      app: this.app,
+    const newAggregate = new this.app.WritableAggregate({
       writeModel: this.writeModel,
       context: { name: command.context.name },
       aggregate: { name: command.aggregate.name, id: command.aggregate.id },
