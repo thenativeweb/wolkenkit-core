@@ -26,7 +26,7 @@
     "lodash": "4.17.11",
     "marble-run": "0.2.0",
     "processenv": "1.1.0",
-    "tailwind": "thenativeweb/tailwind#25ca88e351154a1744fc7c0e337b4f396e403151",
+    "tailwind": "thenativeweb/tailwind#9db559ee1d26732bc7bd48c1eac5955d34d66385",
     "validate-value": "5.0.2",
     "wolkenkit-application": "thenativeweb/wolkenkit-application#e595ba1423002de2e8e5a077c3a735473423745f",
     "wolkenkit-eventstore": "thenativeweb/wolkenkit-eventstore#c921bfabcf570ad5c225166e90d1f88534f45b7b"
