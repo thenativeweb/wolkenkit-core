@@ -38,7 +38,7 @@ const projections = {
 };
 
 const queries = {
-  readList: {
+  readItem: {
     isAuthorized: forPublic()
   }
 };
