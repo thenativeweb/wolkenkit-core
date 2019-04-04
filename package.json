@@ -29,14 +29,14 @@
     "tailwind": "thenativeweb/tailwind#bd3541d822ae786319da464f3e68a3a1068b1b88",
     "validate-value": "5.0.2",
     "wolkenkit-application": "thenativeweb/wolkenkit-application#2b88335aa4000f68c6ee17b4d519aeef26ad89be",
-    "wolkenkit-eventstore": "thenativeweb/wolkenkit-eventstore#b1f29a2ba6c614f26c8bf721397e3446968bd2d8"
+    "wolkenkit-eventstore": "thenativeweb/wolkenkit-eventstore#33b862ab1109fd55ac42637b6bc7a8e5d55c4f5a"
   },
   "devDependencies": {
     "assertthat": "2.0.3",
     "commands-events": "thenativeweb/commands-events#ca11473cfb1de65d65d0342540e33e7acfa4dc78",
     "common-tags": "1.8.0",
     "hase": "2.0.0",
-    "pg": "7.4.3",
+    "pg": "7.9.0",
     "pg-connection-string": "2.0.0",
     "record-stdstreams": "1.0.0",
     "roboter": "4.0.3",
