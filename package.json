@@ -29,7 +29,7 @@
     "tailwind": "thenativeweb/tailwind#bd3541d822ae786319da464f3e68a3a1068b1b88",
     "validate-value": "5.0.2",
     "wolkenkit-application": "thenativeweb/wolkenkit-application#2b88335aa4000f68c6ee17b4d519aeef26ad89be",
-    "wolkenkit-eventstore": "thenativeweb/wolkenkit-eventstore#33b862ab1109fd55ac42637b6bc7a8e5d55c4f5a"
+    "wolkenkit-eventstore": "thenativeweb/wolkenkit-eventstore#0f573e5532e6e419abd2f6bdbd6735df84228f9c"
   },
   "devDependencies": {
     "assertthat": "2.0.3",
