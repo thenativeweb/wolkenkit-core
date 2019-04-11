@@ -26,10 +26,10 @@
     "lodash": "4.17.11",
     "marble-run": "0.2.0",
     "processenv": "1.1.0",
-    "tailwind": "thenativeweb/tailwind#bd3541d822ae786319da464f3e68a3a1068b1b88",
+    "tailwind": "thenativeweb/tailwind#9420446723dfc5cc7e252d23ccfdb571ee57ed77",
     "validate-value": "5.0.2",
-    "wolkenkit-application": "thenativeweb/wolkenkit-application#0e450ddc06c9108101134ec7e1de934edc123fef",
-    "wolkenkit-eventstore": "thenativeweb/wolkenkit-eventstore#0f573e5532e6e419abd2f6bdbd6735df84228f9c"
+    "wolkenkit-application": "thenativeweb/wolkenkit-application#8fae12059088a1fce8c106d5f1b8a84fac5dd468",
+    "wolkenkit-eventstore": "thenativeweb/wolkenkit-eventstore#85c96620e739b1db85db025318dcc6635fdf8500"
   },
   "devDependencies": {
     "assertthat": "2.0.3",
