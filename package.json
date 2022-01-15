@@ -42,7 +42,7 @@
     "record-stdstreams": "1.0.0",
     "roboter": "4.0.2",
     "runfork": "1.1.0",
-    "shelljs": "0.8.3",
+    "shelljs": "0.8.5",
     "streamtoarray": "1.1.0",
     "superagent": "4.1.0",
     "uuidv4": "3.0.1",
